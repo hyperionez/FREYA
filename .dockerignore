@@ -1,0 +1,8 @@
+graphify-out/
+context/
+.git/
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/

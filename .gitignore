@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+chroma_data/
+graphify-out/cache/
+CLAUDE.MD
+/.claude
+PROGRESS.md
