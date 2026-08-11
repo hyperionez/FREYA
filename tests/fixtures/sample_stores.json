@@ -1,0 +1,151 @@
+{
+  "_comment": "Synthetic fixture data for DATA_SOURCE=fixture (context/06-tech-stack-mvp.md). Not scraped from any real store. Schema: context/03-data-schema.md (post store_age_days removal, 2026-08-11 — see context/04-fraud-signal-features.md).",
+  "query": "iphone 13 second",
+  "stores": [
+    {
+      "store_id": "fx-001",
+      "store_name": "Toko Gadget Terpercaya",
+      "marketplace": "tokopedia",
+      "location": "Jakarta Pusat",
+      "is_official_store": true,
+      "rating": 4.9,
+      "review_count": 3200,
+      "total_sold": 15400,
+      "response_rate": 0.98,
+      "response_time_minutes": 5,
+      "store_url": "https://www.tokopedia.com/fx-toko-gadget-terpercaya",
+      "products": [
+        {
+          "product_id": "fx-p001",
+          "store_id": "fx-001",
+          "product_name": "iPhone 13 128GB Second Original",
+          "price": 6500000,
+          "product_rating": 4.9,
+          "product_review_count": 890,
+          "product_url": "https://www.tokopedia.com/fx-toko-gadget-terpercaya/iphone-13-128gb-second-original"
+        }
+      ],
+      "reviews": [
+        {"review_id": "fx-r001", "store_id": "fx-001", "text": "Barang sesuai deskripsi, mulus banget, batre masih 92%. Packing rapi dan cepat sampai.", "posted_at": "2026-06-02T09:15:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r002", "store_id": "fx-001", "text": "Sudah 2x beli disini, selalu puas. Respon chat cepat, garansi toko jelas.", "posted_at": "2026-06-10T14:30:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r003", "store_id": "fx-001", "text": "Unit sesuai foto, ada baret halus di pojok tapi udah diinfoin dari awal. Fair deal.", "posted_at": "2026-06-18T11:05:00+07:00", "reviewer_rating": 4},
+        {"review_id": "fx-r004", "store_id": "fx-001", "text": "Pengiriman agak lama karena stok kosong, tapi seller update terus. Barangnya oke.", "posted_at": "2026-06-25T16:40:00+07:00", "reviewer_rating": 4},
+        {"review_id": "fx-r005", "store_id": "fx-001", "text": "Recommended seller, IMEI terdaftar dan garansi resmi toko 30 hari.", "posted_at": "2026-07-01T08:20:00+07:00", "reviewer_rating": 5}
+      ]
+    },
+    {
+      "store_id": "fx-002",
+      "store_name": "iphonemurahbanget99",
+      "marketplace": "tokopedia",
+      "location": "Tidak diketahui",
+      "is_official_store": false,
+      "rating": 0.0,
+      "review_count": 0,
+      "total_sold": 1,
+      "response_rate": null,
+      "response_time_minutes": null,
+      "store_url": "https://www.tokopedia.com/fx-iphonemurahbanget99",
+      "products": [
+        {
+          "product_id": "fx-p002",
+          "store_id": "fx-002",
+          "product_name": "iPhone 13 Second Mulus",
+          "price": 2100000,
+          "product_rating": 0.0,
+          "product_review_count": 0,
+          "product_url": "https://www.tokopedia.com/fx-iphonemurahbanget99/iphone-13-second-mulus"
+        }
+      ],
+      "reviews": []
+    },
+    {
+      "store_id": "fx-003",
+      "store_name": "HP Mulus Store",
+      "marketplace": "tokopedia",
+      "location": "Bandung",
+      "is_official_store": false,
+      "rating": 4.2,
+      "review_count": 45,
+      "total_sold": 210,
+      "response_rate": 0.61,
+      "response_time_minutes": 45,
+      "store_url": "https://www.tokopedia.com/fx-hp-mulus-store",
+      "products": [
+        {
+          "product_id": "fx-p003",
+          "store_id": "fx-003",
+          "product_name": "iPhone 13 128GB Second Mulus Fullset",
+          "price": 5900000,
+          "product_rating": 4.2,
+          "product_review_count": 45,
+          "product_url": "https://www.tokopedia.com/fx-hp-mulus-store/iphone-13-128gb-second-mulus-fullset"
+        }
+      ],
+      "reviews": [
+        {"review_id": "fx-r006", "store_id": "fx-003", "text": "Barang bagus, sesuai harga. Cuma respon chat agak lambat.", "posted_at": "2026-05-20T10:00:00+07:00", "reviewer_rating": 4},
+        {"review_id": "fx-r007", "store_id": "fx-003", "text": "Oke sih, tapi dus agak lecek pas nyampe. Isinya aman.", "posted_at": "2026-05-28T13:22:00+07:00", "reviewer_rating": 3},
+        {"review_id": "fx-r008", "store_id": "fx-003", "text": "Bagus, sesuai deskripsi, recommended.", "posted_at": "2026-06-05T09:00:00+07:00", "reviewer_rating": 5}
+      ]
+    },
+    {
+      "store_id": "fx-004",
+      "store_name": "GadgetMurahKilat",
+      "marketplace": "tokopedia",
+      "location": "Tidak diketahui",
+      "is_official_store": false,
+      "rating": 5.0,
+      "review_count": 312,
+      "total_sold": 5,
+      "response_rate": 0.15,
+      "response_time_minutes": null,
+      "store_url": "https://www.tokopedia.com/fx-gadgetmurahkilat",
+      "products": [
+        {
+          "product_id": "fx-p004",
+          "store_id": "fx-004",
+          "product_name": "iPhone 13 128GB Second Like New Bergaransi",
+          "price": 3200000,
+          "product_rating": 5.0,
+          "product_review_count": 312,
+          "product_url": "https://www.tokopedia.com/fx-gadgetmurahkilat/iphone-13-128gb-second-like-new-bergaransi"
+        }
+      ],
+      "reviews": [
+        {"review_id": "fx-r009", "store_id": "fx-004", "text": "Barang mantap kualitas terbaik penjual ramah proses cepat", "posted_at": "2026-07-10T03:11:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r010", "store_id": "fx-004", "text": "Barang mantap kualitas terbaik penjual ramah proses cepat", "posted_at": "2026-07-10T03:12:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r011", "store_id": "fx-004", "text": "Barang mantap kualitas terbaik penjual ramah proses cepat!", "posted_at": "2026-07-10T03:14:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r012", "store_id": "fx-004", "text": "produk bagus sesuai pesanan mantap top recommended seller", "posted_at": "2026-07-10T03:20:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r013", "store_id": "fx-004", "text": "produk bagus sesuai pesanan mantap top recommended seller", "posted_at": "2026-07-10T03:21:00+07:00", "reviewer_rating": 5}
+      ]
+    },
+    {
+      "store_id": "fx-005",
+      "store_name": "iBox Authorized Reseller Kemang",
+      "marketplace": "tokopedia",
+      "location": "Jakarta Selatan",
+      "is_official_store": true,
+      "rating": 4.8,
+      "review_count": 8100,
+      "total_sold": 42000,
+      "response_rate": 0.95,
+      "response_time_minutes": 8,
+      "store_url": "https://www.tokopedia.com/fx-ibox-authorized-reseller-kemang",
+      "products": [
+        {
+          "product_id": "fx-p005",
+          "store_id": "fx-005",
+          "product_name": "iPhone 13 128GB Second Resmi iBox Fullset",
+          "price": 6900000,
+          "product_rating": 4.8,
+          "product_review_count": 2100,
+          "product_url": "https://www.tokopedia.com/fx-ibox-authorized-reseller-kemang/iphone-13-128gb-second-resmi-ibox-fullset"
+        }
+      ],
+      "reviews": [
+        {"review_id": "fx-r014", "store_id": "fx-005", "text": "Resmi iBox, nota dan garansi lengkap. Worth the price.", "posted_at": "2026-06-14T12:00:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r015", "store_id": "fx-005", "text": "Pelayanan profesional, unit sesuai spek yang dipesan.", "posted_at": "2026-06-22T15:45:00+07:00", "reviewer_rating": 5},
+        {"review_id": "fx-r016", "store_id": "fx-005", "text": "Agak mahal dibanding toko lain tapi worth it karena garansi resmi.", "posted_at": "2026-07-03T10:10:00+07:00", "reviewer_rating": 4}
+      ]
+    }
+  ]
+}

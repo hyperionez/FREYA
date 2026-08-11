@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
     && playwright install --with-deps chromium
 
 COPY app/ app/
+COPY tests/ tests/
 
 EXPOSE 8000
 

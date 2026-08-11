@@ -7,7 +7,6 @@ Prinsip: tiap sinyal dikonversi jadi kontribusi skor (positif = menambah keperca
 | Sinyal | Deskripsi | Bobot | Arah | Sumber |
 |---|---|---|---|---|
 | `price_deviation` | Selisih harga toko vs median harga produk sejenis | 20 | Semakin jauh di bawah median → skor turun tajam | Rule-based (matematis) |
-| `store_age` | Umur toko sejak dibuat | 15 | Toko < 30 hari → turun; > 1 tahun → naik | Rule-based |
 | `rating` | Rating toko (0-5) | 15 | Linear: rating tinggi → naik | Rule-based |
 | `review_count` | Jumlah ulasan toko | 10 | Review sangat sedikit (<10) → turun | Rule-based |
 | `is_official_store` | Status toko resmi/verified | 10 | Official → bonus skor | Rule-based |
@@ -16,6 +15,8 @@ Prinsip: tiap sinyal dikonversi jadi kontribusi skor (positif = menambah keperca
 | `review_authenticity_score` | Skor keaslian review (bot vs asli) | 20 | Skor rendah (banyak indikasi bot) → turun tajam | Modul Review Analysis — lihat `08-review-analysis-module.md` |
 
 > Bobot di atas adalah starting point, dikalibrasi ulang setelah uji manual terhadap sample toko nyata.
+
+> **`store_age` (bobot 15) dihapus dari MVP (2026-08-11).** Dikonfirmasi lewat inspeksi langsung (`context/10-tokopedia-scraping-notes.md`) bahwa Tokopedia tidak menampilkan umur toko/tanggal bergabung di mana pun pada UI toko (dialog `Info Toko` cuma berisi deskripsi & catatan toko). Bobot 7 sinyal di atas totalnya 85 (bukan 100) — baseline tetap 50, jadi skor akhir tidak otomatis mencapai 100 penuh meski semua sinyal positif maksimal. Kalau nanti ditemukan proxy lain untuk umur toko (misal tanggal produk tertua di etalase), sinyal ini bisa dipertimbangkan lagi.
 
 ## 2. Contoh Rule Konkret — Sinyal Numerik (Pseudocode)
 
@@ -28,15 +29,6 @@ def score_price_deviation(store_price, market_median):
         return -12
     elif deviation <= -0.15:
         return -5
-    return 0
-
-def score_store_age(age_days):
-    if age_days < 7:
-        return -15
-    elif age_days < 30:
-        return -8
-    elif age_days > 365:
-        return +10
     return 0
 
 def score_rating_review(rating, review_count):
@@ -68,7 +60,7 @@ def score_review_authenticity(authenticity_score):
 Skor akhir = `50 (baseline netral) + sum(semua kontribusi sinyal)`, di-clamp ke rentang 0-100.
 
 ## 4. Kombinasi Sinyal yang Perlu Diwaspadai (Compound Red Flags)
-- **Toko baru + harga jauh di bawah pasar** → langsung set label maksimal "Berbahaya" meski sinyal lain netral.
+- ~~Toko baru + harga jauh di bawah pasar~~ — **dihapus**, bergantung pada `store_age` yang sudah tidak tersedia (lihat catatan di §1).
 - **Rating sempurna (5.0) tapi review_authenticity_score rendah** → highly suspicious, dua sinyal saling menguatkan indikasi review dibeli/bot.
 - **review_count tinggi tapi review_authenticity_score rendah** → volume review besar tidak otomatis kredibel kalau banyak yang bot.
 

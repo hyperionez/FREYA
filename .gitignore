@@ -5,6 +5,7 @@ __pycache__/
 venv/
 chroma_data/
 graphify-out/cache/
+.scratch/
 CLAUDE.MD
 /.claude
 PROGRESS.md

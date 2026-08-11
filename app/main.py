@@ -1,9 +1,6 @@
-"""FastAPI entrypoint (STEP 0/4 of context/02-architecture-ipo.md).
-
-The /search pipeline (fetcher -> features -> scoring -> labeling) lands here
-as Fase 1-4 of context/07-roadmap-milestone.md are implemented.
-"""
 from fastapi import FastAPI
+
+from app.fetcher import fetch_stores
 
 app = FastAPI(title="Fraud Detector MVP")
 
@@ -14,6 +11,9 @@ def health():
 
 
 @app.get("/search")
-def search(query: str):
-    # TODO(Fase 1-4): live scraping -> feature extraction -> scoring -> labeling
-    return {"query": query, "results": [], "note": "pipeline not yet implemented"}
+async def search(query: str):
+    # STEP 1 (fetch) is wired up; STEP 2-4 (feature extraction, scoring,
+    # labeling) aren't implemented yet (Fase 2-3, context/07-roadmap-milestone.md)
+    # so this returns raw fetched stores, not the final scored/labeled output.
+    stores = await fetch_stores(query)
+    return {"query": query, "stores": stores, "note": "scoring/labeling not yet implemented"}

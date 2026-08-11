@@ -6,13 +6,13 @@ Track A (Core MVP) dan Track B (Review Authenticity Model) berjalan **paralel**,
 
 ### Fase 0 — Persiapan (1-2 hari)
 - [ ] Tentukan 1 marketplace target, cek struktur halaman untuk scraping (Playwright).
-- [ ] Siapkan environment: Python, FastAPI, Playwright.
+- [x] Siapkan environment: Python, FastAPI, Playwright.
 - [ ] Kumpulkan 15-20 contoh toko (campuran kredibel & mencurigakan) untuk kalibrasi manual nanti.
 
 ### Fase 1 — Live Scraping (2-3 hari)
-- [ ] Implementasi `fetcher.py`: Playwright scraping toko, produk, dan 20-30 review/toko.
-- [ ] Implementasi mode fixture (`DATA_SOURCE=fixture`) sebagai fallback testing.
-- [ ] Tangani rate limiting, delay antar request, dan kegagalan scraping (fail gracefully).
+- [ ] Implementasi `fetcher.py`: Playwright scraping toko, produk, dan 20-30 review/toko. **Partial (2026-08-11):** store discovery (search → produk → toko) dan sebagian field toko (`rating`, `review_count`*, `total_sold`) sudah jalan; `location`, `is_official_store`, `response_rate`, `response_time_minutes`, produk, dan review masih kosong — selector belum ketemu/dikonfirmasi (lihat `context/10-tokopedia-scraping-notes.md`). *`review_count` masih pakai angka rating (552) sebagai placeholder, bukan angka ulasan (278) — perlu diperbaiki.
+- [x] Implementasi mode fixture (`DATA_SOURCE=fixture`) sebagai fallback testing. Diverifikasi jalan end-to-end (venv lokal + Docker) lewat `/search`.
+- [x] Tangani rate limiting, delay antar request, dan kegagalan scraping (fail gracefully). Delay + skip-on-error diimplementasi di `fetcher.py`, berlaku juga untuk bagian live scraping yang belum lengkap di atas.
 
 ### Fase 2 — Feature Extraction & Review Analysis Lapis 1 (3-4 hari)
 - [ ] Implementasi `features.py` untuk fitur numerik.

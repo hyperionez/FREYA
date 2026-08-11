@@ -8,7 +8,6 @@
   "store_name": "string",
   "marketplace": "string (contoh: 'tokopedia')",
   "location": "string",
-  "store_age_days": "integer",
   "is_official_store": "boolean",
   "rating": "float (0-5)",
   "review_count": "integer",
@@ -71,7 +70,7 @@
   "label": "enum ['Aman', 'Waspada', 'Berbahaya']",
   "reasons": [
     "string (contoh: 'Harga 55% di bawah median pasar')",
-    "string (contoh: 'Toko berumur 3 hari, belum ada ulasan')",
+    "string (contoh: 'Belum ada ulasan')",
     "string (contoh: '24% review terindikasi bot')"
   ],
   "evaluated_at": "datetime (ISO 8601)"
@@ -93,7 +92,7 @@
       "reasons": [
         "Rating toko 4.9 dari 3.200 ulasan",
         "Harga sesuai kisaran pasar (median: 6.7jt)",
-        "Toko sudah aktif 3 tahun",
+        "Toko berstatus official/verified",
         "Review authenticity score 91/100 — pola review wajar"
       ],
       "store_url": "https://..."
@@ -106,7 +105,7 @@
       "score": 18,
       "reasons": [
         "Harga 68% di bawah median pasar",
-        "Toko baru 4 hari, 0 ulasan",
+        "Belum ada ulasan",
         "Tidak ada status verifikasi toko"
       ],
       "store_url": "https://..."

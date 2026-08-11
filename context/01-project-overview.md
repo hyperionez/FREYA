@@ -13,7 +13,7 @@ Fokus MVP: **membuktikan alur end-to-end bisa jalan dan labelnya masuk akal**, b
 
 ## 3. Prinsip Inti Arsitektur
 1. **Keputusan label tetap deterministik (rule-based)** — bukan diserahkan mentah-mentah ke LLM. Ini menjaga sistem auditable, cepat, dan bebas risiko hallucination pada keputusan inti.
-2. **AI/LLM masuk sebagai layer sinyal tambahan atau penjelasan**, khusus untuk data tidak terstruktur (teks review) yang memang butuh pemahaman bahasa — bukan untuk data numerik yang sudah bisa dihitung langsung (rating, harga, umur toko).
+2. **AI/LLM masuk sebagai layer sinyal tambahan atau penjelasan**, khusus untuk data tidak terstruktur (teks review) yang memang butuh pemahaman bahasa — bukan untuk data numerik yang sudah bisa dihitung langsung (rating, harga, total terjual).
 3. **Tidak ada fine-tuning tanpa data berlabel.** Karena belum ada dataset review berlabel bot/asli, fine-tuning dijalankan sebagai track terpisah yang tidak menghambat rilis MVP inti.
 
 ## 4. Scope (In / Out)
@@ -21,7 +21,7 @@ Fokus MVP: **membuktikan alur end-to-end bisa jalan dan labelnya masuk akal**, b
 **Termasuk scope MVP:**
 - 1 marketplace saja dulu.
 - Live scraping (Playwright) untuk data toko, produk, dan 20-30 review per toko.
-- Rule-based scoring engine untuk sinyal numerik (harga, rating, umur toko, dll).
+- Rule-based scoring engine untuk sinyal numerik (harga, rating, total terjual, dll).
 - Modul Review Analysis Lapis 1 (heuristic embedding) sebagai proxy `review_authenticity_score`.
 - Output: daftar toko + label + skor + alasan.
 - Fixture data (mode sekunder) untuk unit testing & showcase/demo.

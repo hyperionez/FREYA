@@ -32,7 +32,7 @@ LLM besar (Gemini/GPT) didesain general-purpose; fine-tuning sendiri oleh user u
 Sudah diputuskan: anotasi manual dipilih di atas bootstrap dari heuristik, karena label dari heuristik (near-duplicate/timestamp) itu noisy — kalau dipakai langsung untuk training, model bisa belajar dari asumsi yang belum tervalidasi manusia. Anotasi manual lebih lambat tapi hasilnya lebih reliable sebagai ground truth pertama project ini.
 
 ## 5. Rule-Based Tetap Ada Sebagai Sanity Check
-Bahkan setelah Track B menghasilkan model fine-tuned, rule-based signal lain (harga, umur toko) tetap jadi baseline pembanding. Kalau model bilang "review authentic" tapi sinyal lain ekstrem (misal harga 90% di bawah pasar + toko baru 3 hari), kombinasi itu tetap di-flag sebagai anomali di scoring engine (lihat "Compound Red Flags" di `04-fraud-signal-features.md`) — model tidak dipercaya buta.
+Bahkan setelah Track B menghasilkan model fine-tuned, rule-based signal lain (harga, rating) tetap jadi baseline pembanding. Kalau model bilang "review authentic" tapi sinyal lain ekstrem (misal harga 90% di bawah pasar + rating toko rendah), kombinasi itu tetap di-flag sebagai anomali di scoring engine (lihat "Compound Red Flags" di `04-fraud-signal-features.md`) — model tidak dipercaya buta.
 
 ## 6. Roadmap Setelah Track B Siap
 ```

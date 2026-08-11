@@ -11,7 +11,7 @@
         ▼
 [STEP 2: Feature Extraction]
         │
-        ├── Fitur numerik langsung (rating, harga, umur toko, dll)
+        ├── Fitur numerik langsung (rating, harga, total terjual, dll)
         │
         └── Modul Review Analysis (lihat 08-review-analysis-module.md)
                  │
@@ -41,7 +41,7 @@
 
 ### STEP 2 — Feature Extraction
 Dua jalur paralel:
-1. **Fitur numerik** — dihitung langsung dari data mentah (`price_deviation`, `store_age_days`, `rating_score`, dll). Tidak melibatkan AI sama sekali.
+1. **Fitur numerik** — dihitung langsung dari data mentah (`price_deviation`, `rating_score`, `total_sold`, dll). Tidak melibatkan AI sama sekali.
 2. **Fitur dari teks review** — diproses lewat Modul Review Analysis (embedding + heuristik, opsional LLM) menghasilkan satu fitur baru: `review_authenticity_score`.
 
 Detail fitur numerik ada di `04-fraud-signal-features.md`. Detail modul review ada di `08-review-analysis-module.md`.
