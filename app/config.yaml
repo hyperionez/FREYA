@@ -1,0 +1,68 @@
+# Weights & thresholds for STEP 3 scoring engine (context/04-fraud-signal-features.md).
+# Recalibrate these during Fase 5 validation without touching scoring.py.
+
+baseline: 50
+
+price_deviation:
+  weight: 20
+  # Checked in order (most negative first) — first match wins.
+  thresholds:
+    - {max_deviation: -0.5, contribution: -20}
+    - {max_deviation: -0.3, contribution: -12}
+    - {max_deviation: -0.15, contribution: -5}
+
+# Combines the "rating" (15) and "review_count" (10) rows from the signal
+# table into one rule, per score_rating_review() in
+# context/04-fraud-signal-features.md §2.
+rating_review:
+  weight: 25
+  min_review_count: 10
+  low_review_count_contribution: -10
+  # Checked in order (highest rating first) — first match wins.
+  rating_thresholds:
+    - {min_rating: 4.5, contribution: 15}
+    - {min_rating: 4.0, contribution: 8}
+  low_rating:
+    max_rating: 3.0
+    contribution: -20
+
+is_official_store:
+  weight: 10
+  contribution: 10
+
+# Spec only describes the penalty direction ("response rate rendah -> turun");
+# no bonus for high response_rate is defined.
+response_rate:
+  weight: 5
+  low_threshold: 0.5
+  contribution: -5
+
+# Spec describes this as inherently compound ("sangat sedikit transaksi TAPI
+# klaim harga murah -> turun") rather than a standalone total_sold threshold.
+total_sold:
+  weight: 5
+  low_threshold: 10
+  requires_price_deviation_at_most: -0.3
+  contribution: -5
+
+review_authenticity:
+  weight: 20
+  low_threshold: 30
+  low_contribution: -20
+  mid_threshold: 60
+  mid_contribution: -8
+  high_threshold: 85
+  high_contribution: 10
+
+# context/04-fraud-signal-features.md §4 — these override the individual
+# rating_review / review_authenticity contributions above when triggered,
+# rather than stacking as extra additive penalties.
+compound_rules:
+  perfect_rating_low_authenticity:
+    rating_at_least: 5.0
+    authenticity_below: 60
+    contribution: -15
+  high_review_count_low_authenticity:
+    review_count_at_least: 1000
+    authenticity_below: 60
+    contribution: -15

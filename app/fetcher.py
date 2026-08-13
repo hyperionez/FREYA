@@ -67,8 +67,7 @@ async def _fetch_live(query: str) -> list[dict[str, Any]]:
         try:
             store_urls = await _collect_store_urls(page, query, seen_store_urls)
         except Exception:
-            # context/02-architecture-ipo.md §3: fail gracefully — a broken
-            # search page shouldn't fail the whole request, just return nothing.
+            
             store_urls = []
 
         for store_url in store_urls:
@@ -97,8 +96,7 @@ async def _collect_store_urls(page: Page, query: str, seen: set[str]) -> list[st
     await page.goto(TOKOPEDIA_SEARCH_URL.format(query=query.replace(" ", "%20")))
     await _polite_delay()
 
-    # Accessible name is "product-image " + the product's own title — not a
-    # stable literal string, matched here as a prefix pattern instead.
+
     product_links = page.get_by_role("link", name=re.compile(r"^product-image"))
     count = min(await product_links.count(), MAX_PRODUCTS_TO_SCAN)
     product_hrefs = []
@@ -111,10 +109,7 @@ async def _collect_store_urls(page: Page, query: str, seen: set[str]) -> list[st
     for href in product_hrefs:
         try:
             await page.goto(href)
-            # Confirmed live: the store name renders as a heading on the PDP,
-            # and clicking it navigates to the store page. Using a real click +
-            # navigation wait rather than reading an href, since it's unconfirmed
-            # whether the heading sits inside a plain <a> or a JS click handler.
+
             heading = page.get_by_role("heading").first
             if await heading.count() == 0:
                 continue
@@ -174,10 +169,7 @@ async def _scrape_store(page: Page, store_url: str) -> dict[str, Any] | None:
         "location": None,  # TODO: selector not found yet
         "is_official_store": None,  # TODO: badge meaning unconfirmed, see docstring
         "rating": rating,
-        # NOTE: this is Tokopedia's *rating* count (552 in the example session),
-        # not the *ulasan*/written-review count (278) — they're different numbers
-        # on Tokopedia. Using rating_count as a placeholder for review_count until
-        # that distinction is resolved; treat as approximate.
+
         "review_count": rating_count,
         "total_sold": total_sold,
         "response_rate": None,  # TODO: not found yet

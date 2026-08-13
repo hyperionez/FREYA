@@ -15,13 +15,14 @@ Track A (Core MVP) dan Track B (Review Authenticity Model) berjalan **paralel**,
 - [x] Tangani rate limiting, delay antar request, dan kegagalan scraping (fail gracefully). Delay + skip-on-error diimplementasi di `fetcher.py`, berlaku juga untuk bagian live scraping yang belum lengkap di atas.
 
 ### Fase 2 — Feature Extraction & Review Analysis Lapis 1 (3-4 hari)
-- [ ] Implementasi `features.py` untuk fitur numerik.
-- [ ] Implementasi `review_analysis/embedding.py`: embed review + near-duplicate detection.
+- [x] Implementasi `features.py` untuk fitur numerik. `price_deviation` dihitung terhadap median harga lintas toko untuk query yang sama; `rating`, `review_count`, `is_official_store`, `response_rate`, `total_sold` pass-through dari data mentah. Diverifikasi lewat `/search` dengan fixture data.
+- [x] Implementasi `review_analysis/embedding.py`: embed review (`sentence-transformers`, `paraphrase-multilingual-MiniLM-L12-v2`) + near-duplicate detection (cosine similarity > 0.9) + time-clustering (≥5 review dalam 10 menit). Kontrak `{score, source, reasons}` (source selalu `heuristic_l1` untuk saat ini). Diverifikasi: toko `GadgetMurahKilat` di fixture (review nyaris identik dalam rentang 10 menit) otomatis terdeteksi dan turun ke skor 20.
 - [ ] **[Mulai Track B secara paralel]**: mulai kumpulkan sample review dari hasil scraping untuk keperluan anotasi.
+- Catatan: Lapis 2 (LLM/Gemini + RAG untuk kasus ambigu) belum diimplementasikan — di luar scope Fase 2, hasil ambigu tetap pakai skor Lapis 1 untuk saat ini.
 
 ### Fase 3 — Scoring & Labeling (2-3 hari)
-- [ ] Implementasi `scoring.py` sesuai bobot di `04-fraud-signal-features.md`.
-- [ ] Implementasi `labeling.py`: mapping skor -> label + reasons.
+- [x] Implementasi `scoring.py` sesuai bobot di `04-fraud-signal-features.md`. Bobot/threshold dipindah ke `config.yaml` (recalibratable tanpa ubah kode). Mencakup 6 sinyal individual + 2 compound rule (§4) yang override kontribusi individual saat trigger. Diverifikasi lewat `/search` dengan fixture data — compound rule "rating sempurna tapi review bot" berhasil menjatuhkan skor `GadgetMurahKilat` ke 0.
+- [x] Implementasi `labeling.py`: mapping skor -> label + reasons. Threshold Aman ≥75 / Waspada 40-74 / Berbahaya <40 (§5). Reasons diambil dari kontribusi scoring dengan |kontribusi| ≥ 10, diurutkan dari paling signifikan; fallback reason kalau tidak ada yang signifikan supaya label tidak pernah tanpa alasan. `/search` sekarang menjalankan STEP 1-4 penuh dan sort hasil per skor tertinggi. Diverifikasi lewat fixture: 2 toko Aman (85), 1 Waspada (68), 2 Berbahaya (7, 0).
 - [ ] Unit test untuk tiap rule scoring.
 
 ### Fase 4 — Interface & Integrasi (2-3 hari)

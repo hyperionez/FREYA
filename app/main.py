@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 
+from app.features import extract_features
 from app.fetcher import fetch_stores
+from app.labeling import label_stores
+from app.scoring import score_stores
 
 app = FastAPI(title="Fraud Detector MVP")
 
@@ -12,8 +15,12 @@ def health():
 
 @app.get("/search")
 async def search(query: str):
-    # STEP 1 (fetch) is wired up; STEP 2-4 (feature extraction, scoring,
-    # labeling) aren't implemented yet (Fase 2-3, context/07-roadmap-milestone.md)
-    # so this returns raw fetched stores, not the final scored/labeled output.
+    # STEP 1-4 (fetch, feature extraction, scoring, labeling) are all wired
+    # up — this is the full Track A pipeline (context/02-architecture-ipo.md).
+    # Sorted by score descending per the Output contract there.
     stores = await fetch_stores(query)
-    return {"query": query, "stores": stores, "note": "scoring/labeling not yet implemented"}
+    stores = extract_features(stores)
+    stores = score_stores(stores)
+    stores = label_stores(stores)
+    stores.sort(key=lambda s: s["scoring"]["score"], reverse=True)
+    return {"query": query, "stores": stores}
