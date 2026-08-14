@@ -1,14 +1,3 @@
-"""STEP 3 — scoring engine (Fase 3, context/07-roadmap-milestone.md).
-
-Rule-based, weighted, 0-100 (context/04-fraud-signal-features.md). Treats
-every input feature identically whether it came from plain arithmetic
-(features.py) or the Review Analysis module (review_authenticity_score) —
-this is what lets Track B swap in a fine-tuned model later without touching
-this file (context/02-architecture-ipo.md §3).
-
-Weights/thresholds live in config.yaml so they're recalibratable without
-code changes (Fase 5 calibration pass, CLAUDE.md "Scoring").
-"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -21,18 +10,10 @@ _CONFIG: dict[str, Any] = yaml.safe_load(CONFIG_PATH.read_text(encoding="utf-8")
 
 
 def score_stores(stores: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """STEP 3 entry point. Returns each store with an added "scoring" dict."""
     return [{**store, "scoring": score_store(store["features"])} for store in stores]
 
 
 def score_store(features: dict[str, Any]) -> dict[str, Any]:
-    """Returns {"score": int 0-100, "contributions": [{"signal", "contribution", "detail"}]}.
-
-    "detail" is a short technical note per contribution, not the final
-    user-facing "reasons" list — that's STEP 4 (labeling.py, not implemented
-    yet), which filters/formats contributions where |contribution| >= 10
-    (context/04-fraud-signal-features.md §5).
-    """
     contributions = {
         "price_deviation": _score_price_deviation(features.get("price_deviation")),
         "rating_review": _score_rating_review(features.get("rating"), features.get("review_count")),
@@ -145,10 +126,6 @@ def _score_review_authenticity(authenticity_score: int | None) -> dict[str, Any]
 
 
 def _apply_compound_overrides(contributions: dict[str, dict[str, Any]], features: dict[str, Any]) -> None:
-    """context/04-fraud-signal-features.md §4 — a "clean-looking" individual
-    signal combined with a low review_authenticity_score is more suspicious
-    than either signal alone, so these override (not add to) the individual
-    contribution computed above."""
     rating = features.get("rating")
     review_count = features.get("review_count")
     authenticity = features.get("review_authenticity_score")

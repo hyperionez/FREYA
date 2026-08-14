@@ -1,36 +1,16 @@
-"""Modul Review Analysis — Lapis 1 heuristic pre-filter (Fase 2,
-context/07-roadmap-milestone.md; algorithm spec: context/08-review-analysis-
-module.md §2).
-
-Always runs (free, fast, no API cost): embed reviews locally with
-sentence-transformers, then flag near-duplicate text (cosine similarity) and
-posting-time clustering. Lapis 2 (Gemini + RAG) is out of scope for Fase 2 —
-ambiguous cases still return the Lapis 1 result rather than escalating.
-"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from functools import lru_cache
 from typing import Any
 
-EMBEDDING_MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+from app.embedding_model import encode
 
 DUPLICATE_SIMILARITY_THRESHOLD = 0.9
 TIME_CLUSTER_WINDOW_MINUTES = 10
 TIME_CLUSTER_MIN_COUNT = 5
 
 
-@lru_cache(maxsize=1)
-def _model():
-    from sentence_transformers import SentenceTransformer
-
-    return SentenceTransformer(EMBEDDING_MODEL_NAME)
-
-
 def get_review_authenticity_score(store_id: str, reviews: list[dict[str, Any]]) -> dict[str, Any]:
-    """Kontrak stabil ke scoring engine (context/08-review-analysis-module.md §5):
-    selalu {score: int 0-100, source: str, reasons: list[str]}, apa pun sumbernya
-    (heuristik di sini, atau nanti llm_l2 / finetuned_model dari Track B)."""
     if not reviews:
         return {
             "score": 50,
@@ -39,7 +19,7 @@ def get_review_authenticity_score(store_id: str, reviews: list[dict[str, Any]]) 
         }
 
     texts = [r["text"] for r in reviews]
-    embeddings = _model().encode(texts, normalize_embeddings=True)
+    embeddings = encode(texts)
 
     duplicate_pairs = _detect_near_duplicates(embeddings)
     duplicated_indices = {i for i, j, _ in duplicate_pairs} | {j for i, j, _ in duplicate_pairs}
@@ -70,9 +50,6 @@ def get_review_authenticity_score(store_id: str, reviews: list[dict[str, Any]]) 
 def _detect_near_duplicates(
     embeddings, threshold: float = DUPLICATE_SIMILARITY_THRESHOLD
 ) -> list[tuple[int, int, float]]:
-    """Cosine similarity between every review pair. Embeddings are
-    L2-normalized (encode(..., normalize_embeddings=True)), so dot product
-    equals cosine similarity."""
     duplicate_pairs = []
     n = len(embeddings)
     for i in range(n):

@@ -1,43 +1,41 @@
-"""STEP 2 — feature extraction (Fase 2, context/07-roadmap-milestone.md).
-
-Two parallel paths per context/02-architecture-ipo.md §2: numeric features
-computed straight from raw Store/Product data (no AI), and
-review_authenticity_score from the Review Analysis module (AI-assisted,
-because its input — free-text reviews — is unstructured). Both land in the
-same per-store "features" dict, which STEP 3 (scoring.py, not implemented
-yet) will consume uniformly.
-"""
 from __future__ import annotations
 
 from statistics import median
 from typing import Any
 
+from app.product_matching import filter_relevant_products, group_products_by_variant
 from app.review_analysis.embedding import get_review_authenticity_score
 
 
-def extract_features(stores: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """STEP 2 entry point. Returns each store with an added "features" dict."""
-    market_median_price = _market_median_price(stores)
-    return [_extract_store_features(store, market_median_price) for store in stores]
+def extract_features(stores: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
+    relevant_stores = filter_relevant_products(stores, query)
+    variant_groups = group_products_by_variant(relevant_stores)
+    group_median_by_product_id = _group_median_by_product_id(variant_groups)
+    return [_extract_store_features(store, group_median_by_product_id) for store in relevant_stores]
 
 
-def _market_median_price(stores: list[dict[str, Any]]) -> float | None:
-    prices = [
-        product["price"]
-        for store in stores
-        for product in store.get("products", [])
-        if product.get("price") is not None
-    ]
-    return median(prices) if prices else None
+def _group_median_by_product_id(variant_groups: list[list[dict[str, Any]]]) -> dict[str, float | None]:
+    result: dict[str, float | None] = {}
+    for group in variant_groups:
+        prices = [p["price"] for p in group if p.get("price") is not None]
+        group_median = median(prices) if len(prices) >= 2 else None
+        for product in group:
+            result[product["product_id"]] = group_median
+    return result
 
 
-def _extract_store_features(store: dict[str, Any], market_median_price: float | None) -> dict[str, Any]:
+def _extract_store_features(
+    store: dict[str, Any], group_median_by_product_id: dict[str, float | None]
+) -> dict[str, Any]:
     products = store.get("products", [])
-    store_price = products[0]["price"] if products and products[0].get("price") is not None else None
+    store_product = products[0] if products else None
+    store_price = store_product["price"] if store_product and store_product.get("price") is not None else None
 
     price_deviation = None
-    if store_price is not None and market_median_price:
-        price_deviation = (store_price - market_median_price) / market_median_price
+    if store_product is not None and store_price is not None:
+        group_median = group_median_by_product_id.get(store_product["product_id"])
+        if group_median:
+            price_deviation = (store_price - group_median) / group_median
 
     review_analysis = get_review_authenticity_score(store["store_id"], store.get("reviews", []))
 

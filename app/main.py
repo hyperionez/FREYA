@@ -15,11 +15,8 @@ def health():
 
 @app.get("/search")
 async def search(query: str):
-    # STEP 1-4 (fetch, feature extraction, scoring, labeling) are all wired
-    # up — this is the full Track A pipeline (context/02-architecture-ipo.md).
-    # Sorted by score descending per the Output contract there.
     stores = await fetch_stores(query)
-    stores = extract_features(stores)
+    stores = extract_features(stores, query)
     stores = score_stores(stores)
     stores = label_stores(stores)
     stores.sort(key=lambda s: s["scoring"]["score"], reverse=True)
