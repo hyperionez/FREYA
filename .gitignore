@@ -7,6 +7,7 @@ chroma_data/
 graphify-out
 .scratch/
 CLAUDE.MD
-/.claude
+.claude
 PROGRESS.md
 /ml/model
+.pytest_cache
