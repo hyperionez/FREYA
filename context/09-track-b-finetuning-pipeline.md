@@ -78,3 +78,5 @@ Tidak ada perubahan di `features.py`, `scoring.py`, atau `labeling.py` — sesua
 
 ## 6. Retraining Berkala (Setelah V1)
 Setelah model terpasang dan sistem mulai punya fitur feedback dari user (roadmap V2 di `05-model-approach-mvp.md`), dataset anotasi bisa terus bertambah dari feedback tersebut, dan model di-retrain berkala untuk meningkatkan akurasi seiring waktu.
+
+**Di luar scope submisi kompetisi (2026-08-15):** `context/Master_Plan_AIC-5orang.md` §3 mewajibkan parameter model **statis saat demo** — tanpa auto-retrain atau feedback loop otomatis di repo penyisihan, dan model **dibekukan** per 21 Agustus. Bagian ini murni ide pasca-kompetisi (V2+); tidak diimplementasikan untuk submisi.

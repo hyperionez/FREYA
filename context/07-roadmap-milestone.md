@@ -2,6 +2,8 @@
 
 Track A (Core MVP) dan Track B (Review Authenticity Model) berjalan **paralel**, bukan berurutan. Track A yang menentukan Definition of Done MVP.
 
+**Sinkronisasi dengan kompetisi (2026-08-15):** untuk submisi COMPFEST 18 AIC, Track B tidak lagi "paralel non-blocking" — ia jadi **jalur kritis** (gerbang eligibilitas kustomisasi AI). Timeline harian, peran tim (5 orang), dan checklist deliverable kompetisi (reframing label, anonimisasi, video, proposal) ada di `context/Master_Plan_AIC-5orang.md` — dokumen ini tetap jadi checklist fase teknis, jangan diduplikasi ke sana.
+
 ## Track A — Core MVP
 
 ### Fase 0 — Persiapan (1-2 hari)
@@ -52,15 +54,19 @@ Track A (Core MVP) dan Track B (Review Authenticity Model) berjalan **paralel**,
 ### Fase B2 — Anotasi Manual
 - [ ] Bangun `annotation_app.py` (Streamlit): tampilkan review + top-k pola RAG relevan, tombol Bot/Asli/Ragu.
 - [ ] Anotasi sample review dari hasil scraping Track A (target jumlah disesuaikan kapasitas waktu).
+- [ ] **Tulis rubrik anotasi "bot vs asli"** (kriteria operasional dipakai semua anotator) — tugas P1 bareng P5, Fase 0 Master Plan. Belum ditulis per 2026-08-15; blocker sebelum kalibrasi kappa (Fase 1 Master Plan) bisa mulai.
+- [~] **Dataset dummy/sintetik sebagai jalur paralel (2026-08-15):** ~1000 review sintetis label bot/asli (`ml/generate_dummy_data.py` → `ml/data/annotations.jsonl`) dipakai untuk memvalidasi pipeline B3 (train/evaluate) tanpa menunggu anotasi review asli dari sprint tim. Sah menurut rulebook (`Master_Plan_AIC-5orang.md` §3: "Dataset boleh publik/sintetik"). **Bukan pengganti** anotasi manusia asli — begitu hasil sprint anotasi tim (P2, target 400-500 label per 18 Agt) tersedia, model dilatih ulang di atas data asli dan dummy dataset ini didokumentasikan sebagai keterbatasan jujur di proposal, bukan dipakai sebagai ground truth final.
 
 ### Fase B3 — Fine-Tuning
-- [ ] Siapkan dataset dari hasil anotasi (`data/annotations.jsonl`).
-- [ ] Fine-tune IndoBERT di Google Colab.
-- [ ] Evaluasi model (precision/recall terhadap validation set).
+- [~] Siapkan dataset dari hasil anotasi (`data/annotations.jsonl`). Dummy dataset (2026-08-15) sudah jalan lewat `ml/generate_dummy_data.py`; dataset dari anotasi asli tim masih menunggu Fase B2.
+- [~] Fine-tune IndoBERT di Google Colab. **Smoke test lokal (2026-08-15):** `ml/train.py` (`AutoConfig` + `AutoModelForSequenceClassification`, `indobenchmark/indobert-base-p1`, num_labels=2, stratified split 850/150) dijalankan penuh di CPU lokal (bukan Colab) pakai dataset dummy, buat validasi pipeline sebelum data asli siap — 1 epoch, sukses end-to-end. Run training sungguhan (data asli, iterasi 2-3 putaran per Master Plan Fase 2) direncanakan pindah ke Google Colab GPU sesuai `context/06-tech-stack-mvp.md`, karena (a) iterasi berulang terlalu lambat di CPU lokal untuk tenggat 10 hari, (b) jaringan lokal terbukti tidak stabil untuk download besar ke huggingface.co (lihat Log `PROGRESS.md` 2026-08-15). GPU lokal (GTX 1660 Ti, 6GB) ada secara fisik tapi belum dikonfigurasi (torch CPU-only sengaja dipasang buat konsistensi image Docker; driver NVIDIA juga terlalu lama untuk wheel CUDA modern) — opsi terbuka kalau mau diperbaiki, belum diprioritaskan.
+- [x] Evaluasi model (precision/recall terhadap validation set). `ml/evaluate.py` ditambah, sudah dijalankan terhadap smoke test dummy: model fine-tuned P/R/F1 = 1.00/1.00/1.00 (skor sempurna karena data dummy templated/mudah dipisahkan — bukan indikasi performa realistis, jangan dikutip sebagai angka final di proposal), baseline heuristik pembanding (near-duplicate cross-review, pendekatan kasar Lapis 1 di granularitas per-review, bukan replika persis `get_review_authenticity_score()` yang bekerja per-toko) P/R/F1 macro ≈ 0.80/0.79/0.78 — model fine-tuned menangkap 24 review bot bergaya-mirip-tapi-tidak-persis-duplikat yang lolos dari heuristik near-duplicate.
 
 ### Fase B4 — Integrasi
 - [ ] Ganti proxy Lapis 1 dengan model fine-tuned di `review_analysis/` (via kontrak `review_authenticity_score` yang sudah konsisten).
 - [ ] Bandingkan hasil label sebelum/sesudah model diganti — pastikan tidak ada regresi signifikan.
+- [ ] Bangun fungsi agregasi per-toko (`run_finetuned_classifier()`): model mengklasifikasi satu review, tapi kontrak butuh satu skor per toko — perlu logika gabung prediksi semua review satu toko jadi satu `{score, source, reasons}`. Belum dibangun per 2026-08-15.
+- [ ] **Rencana hosting model (diputuskan 2026-08-15, belum diimplementasi):** model fine-tuned (~475MB) tidak akan di-commit ke git (limit GitHub 100MB tanpa LFS, dan LFS sengaja dihindari). Rencana: push ke HuggingFace Hub (repo public) setelah training selesai (`model.push_to_hub()` atau `huggingface-cli upload`, langkah manual sekali per training, butuh `HF_TOKEN` write-scope milik pelaku push — bukan ditangani Claude), lalu kode inference tinggal ganti path lokal jadi model id HF Hub — `.from_pretrained()` otomatis download+cache saat `docker compose up`, sama seperti mekanisme yang sudah jalan untuk `indobenchmark/indobert-base-p1`. Tidak perlu instruksi CLI tambahan di README untuk juri.
 
 ## Definition of Done
 

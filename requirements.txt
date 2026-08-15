@@ -9,3 +9,6 @@ streamlit
 pyyaml
 python-dotenv
 pytest
+transformers
+accelerate
+scikit-learn
