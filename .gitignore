@@ -10,3 +10,9 @@ CLAUDE.MD
 /.claude
 PROGRESS.md
 Master_Plan_AIC_5orang.md
+ECC/
+
+# Dataset: dump mentah & antara tidak di-commit; train/test/to_label di-commit
+# supaya juri bisa mereproduksi hasil.
+data/raw/
+data/interim/
