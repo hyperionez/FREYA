@@ -1,7 +1,19 @@
+"""Fine-tune IndoBERT untuk klasifikasi review bot vs asli.
+
+Contoh:
+    python ml/train.py                                   # data/train.jsonl, 3 epoch
+    python ml/train.py --epochs 4 --batch-size 16        # kalau pakai GPU
+    python ml/train.py --train ml/data/annotations.jsonl # dataset dummy
+
+Validation split diambil dari berkas latih secara stratified dan hanya hidup di
+memori — berkas dataset di disk tidak pernah ditimpa, supaya gold set berlabel
+tangan (`data/test_real.jsonl`) aman.
+"""
+
 from __future__ import annotations
 
 import argparse
-import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -16,20 +28,30 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
-    
-MODEL_NAME = "indobenchmark/indobert-base-p1"
-DATA_DIR = Path(__file__).resolve().parent / "data"
-ANNOTATIONS_PATH = DATA_DIR / "annotations.jsonl"
-TRAIN_SPLIT_PATH = DATA_DIR / "train.jsonl"
-VAL_SPLIT_PATH = DATA_DIR / "val.jsonl"
-MODEL_OUTPUT_DIR = Path(__file__).resolve().parent / "model" / "final"
-CHECKPOINT_DIR = Path(__file__).resolve().parent / "model" / "checkpoint"
 
-LABEL2ID = {"asli": 0, "bot": 1}
-ID2LABEL = {v: k for k, v in LABEL2ID.items()}
+REPO_ROOT = Path(__file__).resolve().parent.parent
+# `python ml/train.py` menaruh ml/ di sys.path, bukan root repo - tambahkan sendiri
+# supaya paket `ml` bisa diimpor tanpa perlu `python -m ml.train`.
+sys.path.insert(0, str(REPO_ROOT))
+
+from ml.dataset_io import (  # noqa: E402
+    ID2LABEL,
+    LABEL2ID,
+    label_distribution,
+    load_labeled_records,
+)
+
+DEFAULT_TRAIN_PATH = REPO_ROOT / "data" / "train.jsonl"
+MODEL_OUTPUT_DIR = REPO_ROOT / "ml" / "model" / "final"
+CHECKPOINT_DIR = REPO_ROOT / "ml" / "model" / "checkpoint"
+
+MODEL_NAME = "indobenchmark/indobert-base-p1"
+# p99 panjang review di data/train.jsonl = 61 kata, maksimum 92 kata.
+# 128 token wordpiece menampung itu tanpa memotong ekor distribusi.
+MAX_LENGTH = 128
 VAL_FRACTION = 0.15
 RANDOM_STATE = 42
-MAX_LENGTH = 64
+LEARNING_RATE = 2e-5
 
 
 class ReviewDataset(Dataset):
@@ -46,49 +68,27 @@ class ReviewDataset(Dataset):
         return item
 
 
-def load_records(path: Path) -> list[dict]:
-    records = []
-    with path.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            record = json.loads(line)
-            if record["label"] in LABEL2ID:
-                records.append(record)
-    return records
-
-
-def split_dataset() -> tuple[list[dict], list[dict]]:
-    records = load_records(ANNOTATIONS_PATH)
+def split_records(
+    records: list[dict], val_fraction: float, seed: int
+) -> tuple[list[dict], list[dict]]:
     labels = [r["label"] for r in records]
-    train_records, val_records = train_test_split(
+    return train_test_split(
         records,
-        test_size=VAL_FRACTION,
-        random_state=RANDOM_STATE,
+        test_size=val_fraction,
+        random_state=seed,
         stratify=labels,
     )
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    with TRAIN_SPLIT_PATH.open("w", encoding="utf-8") as f:
-        for r in train_records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    with VAL_SPLIT_PATH.open("w", encoding="utf-8") as f:
-        for r in val_records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
-    return train_records, val_records
 
 
-def build_dataset(records: list[dict], tokenizer) -> ReviewDataset:
-    texts = [r["text"] for r in records]
-    labels = [LABEL2ID[r["label"]] for r in records]
+def build_dataset(records: list[dict], tokenizer, max_length: int) -> ReviewDataset:
     encodings = tokenizer(
-        texts,
+        [r["text"] for r in records],
         truncation=True,
         padding="max_length",
-        max_length=MAX_LENGTH,
+        max_length=max_length,
         return_tensors="pt",
     )
-    return ReviewDataset(encodings, labels)
+    return ReviewDataset(encodings, [r["label"] for r in records])
 
 
 def compute_metrics(eval_pred):
@@ -100,35 +100,65 @@ def compute_metrics(eval_pred):
     return {"precision": precision, "recall": recall, "f1": f1}
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Fine-tune IndoBERT bot vs asli")
+    parser.add_argument("--train", type=Path, default=DEFAULT_TRAIN_PATH)
+    parser.add_argument("--output-dir", type=Path, default=MODEL_OUTPUT_DIR)
+    parser.add_argument("--model-name", default=MODEL_NAME)
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch-size", type=int, default=8)
-    args = parser.parse_args()
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--max-length", type=int, default=MAX_LENGTH)
+    parser.add_argument("--learning-rate", type=float, default=LEARNING_RATE)
+    parser.add_argument("--val-fraction", type=float, default=VAL_FRACTION)
+    parser.add_argument("--seed", type=int, default=RANDOM_STATE)
+    return parser.parse_args()
 
-    train_records, val_records = split_dataset()
-    print(f"train={len(train_records)} val={len(val_records)}")
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+def main() -> None:
+    args = parse_args()
+
+    records = load_labeled_records(args.train)
+    if not records:
+        raise SystemExit(f"tidak ada record berlabel di {args.train}")
+
+    train_records, val_records = split_records(records, args.val_fraction, args.seed)
+    use_gpu = torch.cuda.is_available()
+    device_name = torch.cuda.get_device_name(0) if use_gpu else "CPU"
+
+    print(f"sumber      : {args.train}")
+    print(f"distribusi  : {label_distribution(records)} (total {len(records)})")
+    print(f"split       : train={len(train_records)} val={len(val_records)}")
+    print(f"perangkat   : {device_name}")
+    print(f"max_length  : {args.max_length} token")
+
+    tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     config = AutoConfig.from_pretrained(
-        MODEL_NAME, num_labels=2, id2label=ID2LABEL, label2id=LABEL2ID
+        args.model_name, num_labels=2, id2label=ID2LABEL, label2id=LABEL2ID
     )
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, config=config)
+    model = AutoModelForSequenceClassification.from_pretrained(args.model_name, config=config)
 
-    train_dataset = build_dataset(train_records, tokenizer)
-    val_dataset = build_dataset(val_records, tokenizer)
+    train_dataset = build_dataset(train_records, tokenizer, args.max_length)
+    val_dataset = build_dataset(val_records, tokenizer, args.max_length)
 
     training_args = TrainingArguments(
         output_dir=str(CHECKPOINT_DIR),
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size * 2,
+        learning_rate=args.learning_rate,
         eval_strategy="epoch",
         save_strategy="epoch",
         load_best_model_at_end=True,
         metric_for_best_model="f1",
         logging_steps=20,
         save_total_limit=1,
+        seed=args.seed,
+        fp16=use_gpu,
+        # Pinned memory butuh RAM non-pageable. Di laptop 16 GB yang dipakai
+        # bersamaan aplikasi lain, permintaan itu bisa gagal dan mematikan training
+        # di step 0. Dataset ini kecil, jadi mematikannya nyaris tanpa biaya.
+        dataloader_pin_memory=False,
+        dataloader_num_workers=0,
         report_to=[],
     )
 
@@ -141,12 +171,13 @@ def main() -> None:
     )
 
     trainer.train()
-    metrics = trainer.evaluate()
-    print(metrics)
+    print(trainer.evaluate())
 
-    MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    trainer.save_model(str(MODEL_OUTPUT_DIR))
-    tokenizer.save_pretrained(str(MODEL_OUTPUT_DIR))
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    trainer.save_model(str(args.output_dir))
+    tokenizer.save_pretrained(str(args.output_dir))
+    print(f"\nmodel tersimpan di {args.output_dir}")
+    print("langkah berikutnya: python ml/evaluate.py")
 
 
 if __name__ == "__main__":
