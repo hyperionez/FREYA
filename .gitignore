@@ -16,3 +16,7 @@ ECC/
 # supaya juri bisa mereproduksi hasil.
 data/raw/
 data/interim/
+.claude
+PROGRESS.md
+/ml/model
+.pytest_cache
