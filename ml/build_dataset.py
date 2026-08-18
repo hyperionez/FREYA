@@ -6,6 +6,7 @@ terulang saat tahap lain diperbaiki:
     python -m ml.build_dataset real  --input data/raw/reviews.csv --text-field review
     python -m ml.build_dataset synth --n 1500
     python -m ml.build_dataset pack
+    python -m ml.build_dataset sync   # bawa label annotate.py ke to_label.jsonl
     python -m ml.build_dataset gold   # setelah to_label.jsonl dilabeli tangan
 
 Jalankan dari root repo (bukan dari dalam ml/), supaya impor `ml.*` ketemu.
@@ -32,7 +33,9 @@ import time
 from pathlib import Path
 from typing import Any, Iterator
 
+from ml.annotations_sync import clear_labels, label_counts, merge_annotations
 from ml.anonymize import anonymize, normalize_for_dedup
+from ml.register_stats import HEADER, profile_gap, register_profile
 from ml.synth_prompts import BOT_STYLES, build_prompt
 
 DATA_DIR = Path("data")
@@ -43,6 +46,7 @@ TRAIN_PATH = DATA_DIR / "train.jsonl"
 TEST_SYNTHETIC_PATH = DATA_DIR / "test_synthetic.jsonl"
 TO_LABEL_PATH = DATA_DIR / "to_label.jsonl"
 GOLD_PATH = DATA_DIR / "test_real.jsonl"
+ANNOTATIONS_PATH = DATA_DIR / "annotations.jsonl"
 
 MIN_CHARS = 15
 MAX_CHARS = 600
@@ -433,6 +437,137 @@ def _leaked_into_train(gold: list[dict[str, Any]]) -> int:
 # --------------------------------------------------------------------------
 
 
+# --------------------------------------------------------------------------
+# Jembatan anotasi: annotations.jsonl -> to_label.jsonl
+# --------------------------------------------------------------------------
+
+
+def command_sync(_: argparse.Namespace) -> None:
+    """Bawa hasil anotasi ke kolam yang dibaca tahap 'gold'.
+
+    `ml/annotate.py` menulis ke annotations.jsonl, sedangkan 'gold' membaca
+    to_label.jsonl. Tanpa langkah ini kerja anotasi tidak pernah sampai ke
+    gold set, dan kegagalannya senyap.
+    """
+    annotations = _read_jsonl(ANNOTATIONS_PATH)
+    if not annotations:
+        _fail(
+            f"{ANNOTATIONS_PATH} kosong atau belum ada. "
+            "Labeli dulu lewat 'streamlit run ml/annotate.py'."
+        )
+
+    pool = _read_jsonl(TO_LABEL_PATH)
+    if not pool:
+        _fail(f"{TO_LABEL_PATH} kosong. Jalankan 'pack' dulu.")
+
+    merged, report = merge_annotations(pool, annotations)
+    _write_jsonl(TO_LABEL_PATH, merged)
+
+    counts = label_counts(merged)
+    print(f"[sync] anotasi : {len(annotations)} baris -> {report.applied} diterapkan")
+    print(f"[sync] kolam   : {counts} -> {TO_LABEL_PATH}")
+    if report.matched_by_text:
+        print(f"[sync] {report.matched_by_text} dicocokkan lewat teks (review_id bergeser)")
+    if report.orphaned:
+        print(
+            f"[sync] ! {report.orphaned} anotasi tidak ketemu di kolam dan diabaikan.",
+            file=sys.stderr,
+        )
+    _warn_on_ragu_ratio(counts)
+    print("[sync] lanjut  : python -m ml.build_dataset gold")
+
+
+def command_reset_labels(args: argparse.Namespace) -> None:
+    """Kosongkan label manual supaya batch bisa dilabeli ulang dari nol.
+
+    Destruktif. Dipakai kalau label lama tidak lagi dipercaya -- misalnya saat
+    rubrik ternyata tidak ditegakkan dan seluruh batch perlu diulang.
+    """
+    pool = _read_jsonl(TO_LABEL_PATH)
+    if not pool:
+        _fail(f"{TO_LABEL_PATH} kosong. Jalankan 'pack' dulu.")
+
+    before = label_counts(pool)
+    terlabeli = before["asli"] + before["bot"] + before[LABEL_RAGU]
+    if not terlabeli:
+        print(f"[reset] tidak ada label untuk dikosongkan di {TO_LABEL_PATH}")
+        return
+
+    if not args.yes:
+        _fail(
+            f"{terlabeli} label akan dihapus dari {TO_LABEL_PATH} ({before}). "
+            "Pastikan versi lamanya sudah ter-commit di git, lalu ulangi dengan --yes."
+        )
+
+    cleared, count = clear_labels(pool)
+    _write_jsonl(TO_LABEL_PATH, cleared)
+    if ANNOTATIONS_PATH.exists():
+        print(
+            f"[reset] ! {ANNOTATIONS_PATH} masih ada. ml/annotate.py melewati review "
+            "yang sudah tercatat di sana, jadi pindahkan/hapus dulu sebelum melabeli ulang.",
+            file=sys.stderr,
+        )
+    print(f"[reset] sebelum : {before}")
+    print(f"[reset] {count} label dikosongkan -> {TO_LABEL_PATH}")
+    print("[reset] lanjut  : streamlit run ml/annotate.py")
+
+
+def _warn_on_ragu_ratio(counts: dict[str, int]) -> None:
+    """Rubrik menargetkan ragu 10-20%; di luar itu kualitas label perlu dicek."""
+    sudah = counts["asli"] + counts["bot"] + counts[LABEL_RAGU]
+    if sudah < 30:
+        return
+    ratio = counts[LABEL_RAGU] / sudah
+    if ratio < 0.10:
+        print(
+            f"[sync] ! rasio ragu {ratio:.1%} di bawah target rubrik 10-20%. "
+            "Kasus ambigu yang dipaksa jadi 0/1 menambah noise ke gold set."
+        )
+    elif ratio > 0.20:
+        print(f"[sync] ! rasio ragu {ratio:.1%} di atas target 10-20%. Rubrik perlu dipertajam.")
+
+
+def command_register(_: argparse.Namespace) -> None:
+    """Bandingkan cara menulis kelas bot sintetik dengan review sungguhan.
+
+    Kalau kelas bot bisa dipisahkan dari review asli hanya lewat kolom-kolom di
+    sini, model tidak perlu belajar apa pun soal kecurangan - dan itulah yang
+    terjadi pada generasi pertama. Jalankan ini SEBELUM membakar kuota generator.
+    """
+    train = _read_jsonl(TRAIN_PATH)
+    if not train:
+        _fail(f"{TRAIN_PATH} kosong. Jalankan 'pack' dulu.")
+
+    def texts(rows: list[dict[str, Any]], label: Any) -> list[str]:
+        return [r["text"] for r in rows if r.get("label") == label and r.get("text")]
+
+    asli = register_profile(texts(train, LABEL_ASLI))
+    bot = register_profile(texts(train, LABEL_BOT))
+
+    print(HEADER)
+    print(asli.as_row("asli (acuan, data latih)"))
+    print(bot.as_row("bot sintetik"))
+
+    gold = _read_jsonl(GOLD_PATH)
+    if gold:
+        gold_bot = texts(gold, LABEL_BOT)
+        gold_asli = texts(gold, LABEL_ASLI)
+        if gold_bot:
+            print(register_profile(gold_bot).as_row("bot berlabel tangan"))
+        if gold_asli:
+            print(register_profile(gold_asli).as_row("asli berlabel tangan"))
+
+    print("\nSelisih bot sintetik terhadap acuan asli (0 = register sudah cocok):")
+    for field, delta in profile_gap(asli, bot).items():
+        tanda = "  " if abs(delta) < 0.05 else "! "
+        nilai = f"{delta:+.1f} kata" if field == "median_words" else f"{delta:+.1%}"
+        print(f"  {tanda}{field:<24}{nilai:>12}")
+    print(
+        "\nSelisih besar berarti kelas bot dikenali dari CARA MENULIS, bukan dari "
+        "isinya.\nPerbaiki prompt di ml/synth_prompts.py, lalu 'synth' ulang."
+    )
+
+
 def command_stats(_: argparse.Namespace) -> None:
     for path in (REAL_PATH, SYNTH_PATH, TRAIN_PATH, TEST_SYNTHETIC_PATH, TO_LABEL_PATH, GOLD_PATH):
         if not path.exists():
@@ -556,8 +691,18 @@ def main() -> None:
     p_pack = sub.add_parser("pack", help="gabung jadi train/test/to_label")
     p_pack.set_defaults(func=command_pack)
 
+    p_sync = sub.add_parser("sync", help="bawa label annotations.jsonl -> to_label.jsonl")
+    p_sync.set_defaults(func=command_sync)
+
+    p_reset = sub.add_parser("reset-labels", help="kosongkan label manual di to_label.jsonl")
+    p_reset.add_argument("--yes", action="store_true", help="konfirmasi penghapusan label")
+    p_reset.set_defaults(func=command_reset_labels)
+
     p_gold = sub.add_parser("gold", help="bekukan label manual jadi data/test_real.jsonl")
     p_gold.set_defaults(func=command_gold)
+
+    p_register = sub.add_parser("register", help="cek kesenjangan cara menulis bot vs asli")
+    p_register.set_defaults(func=command_register)
 
     p_stats = sub.add_parser("stats", help="tampilkan jumlah & distribusi label")
     p_stats.set_defaults(func=command_stats)
