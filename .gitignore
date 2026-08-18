@@ -10,6 +10,7 @@ CLAUDE.MD
 /.claude
 PROGRESS.md
 Master_Plan_AIC_5orang.md
+AIC_AI_Innovation_Challenge_Rulebook.md
 ECC/
 
 # Dataset: dump mentah & antara tidak di-commit; train/test/to_label di-commit
@@ -20,4 +21,4 @@ data/interim/
 PROGRESS.md
 /ml/model
 .pytest_cache
-.AIC_AI_Innovation_Challenge_Rulebook.md
+
