@@ -21,12 +21,16 @@ import argparse
 import sys
 from pathlib import Path
 
-import torch
+# sklearn WAJIB diimpor sebelum torch. Urutan sebaliknya mematikan proses dengan
+# heap corruption (0xC0000374) saat sklearn menarik pandas -> zoneinfo. Bukan
+# urutan isort baku, jadi jangan dirapikan otomatis.
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
     precision_recall_fscore_support,
 )
+
+import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

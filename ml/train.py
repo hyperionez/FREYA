@@ -16,10 +16,13 @@ import argparse
 import sys
 from pathlib import Path
 
-import numpy as np
-import torch
+# sklearn WAJIB diimpor sebelum torch (alasan sama seperti di ml/evaluate.py):
+# urutan sebaliknya mematikan proses dengan heap corruption 0xC0000374.
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
+
+import numpy as np
+import torch
 from torch.utils.data import Dataset
 from transformers import (
     AutoConfig,
