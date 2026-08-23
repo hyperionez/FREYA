@@ -5,6 +5,12 @@
 Baca  : data/to_label.jsonl   (hasil `python -m ml.build_dataset pack`)
 Tulis : data/annotations.jsonl
 
+Kedua path bisa dialihkan lewat argumen, supaya batch kalibrasi dilabeli dengan
+tool yang sama - bukan disunting tangan - dan hasilnya tidak mencampuri berkas
+anotasi utama:
+
+    streamlit run ml/annotate.py --         --queue data/calibration/batch.jsonl         --out annotations/calibration_michael.jsonl
+
 Setiap label langsung ditulis ke disk begitu tombol ditekan, jadi browser
 tertutup atau laptop mati tidak menghilangkan pekerjaan. Menjalankan ulang
 akan melanjutkan dari review terakhir yang belum dilabeli.
@@ -14,6 +20,7 @@ Kriteria label ada di context/11-annotation-rubric.md — baca dulu sebelum mula
 
 from __future__ import annotations
 
+import argparse
 import html
 import json
 from datetime import datetime
@@ -22,9 +29,25 @@ from typing import Any
 
 import streamlit as st
 
-TO_LABEL_PATH = Path("data/to_label.jsonl")
-ANNOTATIONS_PATH = Path("data/annotations.jsonl")
+DEFAULT_QUEUE = Path("data/to_label.jsonl")
+DEFAULT_OUT = Path("data/annotations.jsonl")
 RUBRIC_PATH = Path("context/11-annotation-rubric.md")
+
+
+def _resolve_paths() -> tuple[Path, Path]:
+    """Ambil path antrean & keluaran dari argumen, jatuh ke default kalau kosong.
+
+    `parse_known_args` dipakai supaya argumen milik Streamlit sendiri tidak
+    membuat tool ini berhenti.
+    """
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--queue", type=Path, default=DEFAULT_QUEUE)
+    parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    args, _ = parser.parse_known_args()
+    return args.queue, args.out
+
+
+TO_LABEL_PATH, ANNOTATIONS_PATH = _resolve_paths()
 
 LABEL_ASLI = 0
 LABEL_BOT = 1
