@@ -54,6 +54,20 @@ def test_keluhan_dilabeli_ragu_bukan_pelanggaran():
     assert laporan["pelanggaran"] == []
 
 
+def test_keluhan_dilabeli_ragu_tetap_jadi_catatan():
+    # Langkah 2 memerintahkan asli, bukan ragu - tapi langkah 1 (teks rusak)
+    # mendahuluinya, jadi ini saran tinjau ulang, bukan pelanggaran keras.
+    laporan = check_records([_rec("pelayanan buruk, saya kecewa", "ragu")])
+
+    assert len(laporan["catatan_keluhan_ragu"]) == 1
+
+
+def test_ragu_tanpa_keluhan_tidak_jadi_catatan():
+    laporan = check_records([_rec("mantap joss", "ragu")])
+
+    assert laporan["catatan_keluhan_ragu"] == []
+
+
 def test_baris_belum_dilabeli_dilewati():
     laporan = check_records([_rec("pelayanan buruk, saya kecewa", None)])
 
@@ -72,8 +86,8 @@ def test_ragu_terlalu_sedikit_ditandai():
 
 
 def test_ragu_dalam_rentang_target_tidak_ditandai():
-    records = [_rec("teks biasa", 0, review_id=f"t-{i}") for i in range(85)]
-    records += [_rec("teks biasa", "ragu", review_id=f"r-{i}") for i in range(15)]
+    records = [_rec("teks biasa", 0, review_id=f"t-{i}") for i in range(70)]
+    records += [_rec("teks biasa", "ragu", review_id=f"r-{i}") for i in range(30)]
     laporan = check_records(records)
 
     assert RAGU_MIN <= laporan["ragu"]["rasio"] <= RAGU_MAKS
@@ -109,3 +123,40 @@ def test_laporan_dipecah_per_anotator():
 
     assert laporan["per_anotator"]["michael"]["pelanggaran"] == 1
     assert laporan["per_anotator"]["JR"]["pelanggaran"] == 0
+
+
+# --- lubang leksikon yang ketahuan dari batch kalibrasi 23 Agustus ---
+
+
+def test_barang_pecah_terdeteksi_keluhan():
+    assert mengandung_keluhan("njir dikasih barang pecah guoblok yg dagang")
+
+
+def test_salah_kirim_dalam_berbagai_bentuk_terdeteksi():
+    assert mengandung_keluhan("hati2 gaes, dikirim barang yg salah")
+    assert mengandung_keluhan("salah warna yang dikirim")
+    assert mengandung_keluhan("barang yang salah dikirim ke saya")
+
+
+def test_tuduhan_penipuan_terdeteksi():
+    assert mengandung_keluhan("tokonya nipu, jangan belanja disini")
+
+
+def test_kondisi_barang_bermasalah_terdeteksi():
+    assert mengandung_keluhan("makanannya sudah basi pas sampai")
+    assert mengandung_keluhan("barangnya bau dan kotor")
+
+
+def test_tidak_bisa_dipakai_terdeteksi():
+    assert mengandung_keluhan("barangnya ga bisa dipakai sama sekali")
+
+
+def test_kata_ambigu_tetap_tidak_dianggap_keluhan():
+    # Sengaja di luar leksikon: maknanya ganda di konteks review marketplace.
+    assert not mengandung_keluhan("sudah lama pemakaian, masih awet")
+    assert not mengandung_keluhan("kurang lebih sesuai ekspektasi")
+    assert not mengandung_keluhan("harganya beda tipis dengan toko sebelah")
+
+
+def test_negasi_pada_penanda_baru_tetap_dihormati():
+    assert not mengandung_keluhan("dikemas rapi, barang tidak pecah sedikit pun")

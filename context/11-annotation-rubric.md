@@ -22,7 +22,7 @@ mencari empat gaya itu, `test_real.jsonl` berhenti mengukur generalisasi — pad
 justru itu satu-satunya alasan ia ada.
 
 **Satu review dinilai apa adanya.** Anotator hanya melihat teks; tidak ada info
-toko, waktu posting, atau review tetangga (lihat §8). Nilai berdasarkan yang
+toko, waktu posting, atau review tetangga (lihat §9). Nilai berdasarkan yang
 terlihat, jangan mengarang konteks.
 
 ---
@@ -39,8 +39,17 @@ terlihat, jangan mengarang konteks.
 pada review ambigu jauh lebih merusak** daripada menandainya ragu, karena ia
 menyuntikkan kebisingan ke satu-satunya test set yang mengukur kelayakan model.
 
-Target sehat: `"ragu"` di kisaran 10–20%. Kalau jauh di bawah itu, kemungkinan
-besar kita menebak-nebak. Kalau jauh di atas, rubrik ini perlu dipertajam.
+Rasio `"ragu"` yang wajar ditentukan **bentuk data**, bukan angka tetap. Diukur di
+kolam 500 review proyek ini: 41% review lebih pendek dari 60 karakter, dan 34%
+pendek **tanpa** keluhan — seluruhnya jatuh ke langkah 5 kalau urutan keputusan
+§5 dijalankan apa adanya. Jadi rasio ragu **20–40% itu normal di kolam ini**, dan
+yang justru mencurigakan adalah rasio jauh di bawahnya: itu tanda review ambigu
+dipaksa dijawab.
+
+> Target lama "10–20%" di dokumen ini salah dan sudah dicabut. Angka itu ditetapkan
+> tanpa melihat distribusi panjang review, lalu dipakai memarahi anotator yang
+> sebenarnya patuh. Kalau kolam datanya berganti, hitung ulang porsi "pendek tanpa
+> keluhan" dan sesuaikan ambangnya di `ml/check_rubric.py`.
 
 ---
 
@@ -89,7 +98,10 @@ Jalankan berurutan, berhenti di langkah pertama yang terpenuhi.
 
 1. Teks rusak, kosong, bukan review, atau bukan Bahasa Indonesia → **`"ragu"`**.
 2. Ada keluhan, kekecewaan, kritik, atau penyebutan masalah konkret → **`0`**
-   (review yang dibeli hampir tidak pernah mengeluh).
+   (review yang dibeli hampir tidak pernah mengeluh). **`"ragu"` bukan jalan
+   tengah di sini** — kalau langkah 1 tidak terpenuhi, keluhan berarti `0`, titik.
+   Menjawab `"ragu"` pada review berkeluhan hanya membuang baris yang justru
+   paling jelas labelnya.
 3. Ada detail pengalaman personal yang spesifik dan sulit ditempel ke produk lain
    (ukuran, warna meleset, lama pemakaian, perbandingan, kondisi saat tiba) → **`0`**.
 4. Terpenuhi **≥2** sinyal §3 → **`1`**.
@@ -118,25 +130,72 @@ Diambil dari data nyata proyek ini.
 
 ## 7. Kalibrasi
 
-Rulebook lomba mengasumsikan dua annotator dan mengukur kesepakatan lewat kappa.
-**Kalau dikerjakan sendirian**, ganti dengan konsistensi diri:
+**Konsistensi diri adalah jalur utama, bukan pengganti darurat.** Versi lama
+dokumen ini menyatakan "rulebook lomba mengasumsikan dua annotator dan mengukur
+kesepakatan lewat kappa" — itu **tidak benar**. Seluruh 320 baris
+`AIC_AI_Innovation_Challenge_Rulebook.md` tidak menyebut anotator, kappa, maupun
+reliabilitas label satu kali pun. Yang dinilai rulebook (bobot 15%) adalah apakah
+keputusan teknis dijelaskan dengan alasan berbasis data dan apakah proses
+pengembangannya reflektif. Satu anotator yang mengukur dirinya sendiri dengan
+jujur memenuhi itu; tiga anotator dengan kappa 0.04 tidak.
 
-1. Labeli 50 review pertama.
-2. Kerjakan hal lain minimal 30 menit.
-3. Labeli ulang 50 review yang sama tanpa melihat hasil pertama.
-4. Hitung berapa persen yang cocok.
+Alurnya (`ml/calibration.py` menjalankan keduanya):
+
+1. `python -m ml.calibration sample --pool <label pass 1> --out <batch>`
+2. Labeli batch dengan `ml/annotate.py`.
+3. Jeda minimal 30 menit — makin lama makin jujur.
+4. Labeli ulang batch yang sama tanpa melihat hasil pertama.
+5. `python -m ml.calibration score --pool <pass 1> --batch <pass 2>`
 
 - **≥85% cocok** → rubrik cukup tajam, lanjutkan.
 - **70–85%** → tajamkan definisi yang paling sering berubah, baru lanjut.
-- **<70%** → tugasnya belum terdefinisi; perbaiki rubrik dulu. Melanjutkan hanya
-  memproduksi kebisingan.
+- **<70%** → tugasnya belum terdefinisi; perbaiki rubrik dulu.
+
+**Syarat yang mudah terlewat: kedua pass harus memakai protokol yang sama.**
+Membandingkan pass yang dijaga alat dengan pass lama yang melanggar rubrik akan
+mengukur *perubahan protokol*, bukan konsistensi — dan angkanya keluar rendah
+walaupun pass kedua justru lebih benar. Pernah terjadi di proyek ini: 57% cocok,
+kappa 0.334, padahal seluruh 43 selisihnya bergerak satu arah menjauhi `bot` dan
+9 pelanggaran langkah 2 hilang jadi nol. Kalau protokolnya baru berubah, ulangi
+kalibrasi dengan **dua pass yang sama-sama dijaga**.
 
 Angka ini **wajib masuk proposal** sebagai lampiran. Konsistensi anotator yang
 diakui apa adanya lebih bernilai di mata juri daripada klaim akurasi tanpa dasar.
 
 ---
 
-## 8. Batasan yang diakui
+## 8. Penjagaan alat
+
+Sebagian aturan di atas bisa diperiksa mesin, jadi tidak lagi digantungkan pada
+disiplin manusia di jam keempat melabeli. Alasannya empiris: tanpa penjagaan,
+tiga anotator menghasilkan **86 pelanggaran langkah 2** pada 500 review, dan
+kappa berpasangan jatuh di 0.033–0.061.
+
+`ml/annotate.py` — saat melabeli:
+
+- Review dengan penanda keluhan menampilkan petunjuk langkah 2 **sebelum** tombol
+  ditekan.
+- Label `bot` pada review berkeluhan atau review pendek ditahan untuk
+  dikonfirmasi, bukan diblokir. Leksikon keluhannya presisi-tinggi dan pasti
+  melewatkan sebagian kasus, jadi penilaian manusia harus tetap bisa menang.
+- Label yang menembus penjagaan ditandai `rubrik_override: true` — yang ditembus
+  harus bisa ditinjau ulang.
+
+`ml/check_rubric.py` — setelah melabeli:
+
+    python -m ml.check_rubric annotations/berkas.jsonl
+
+Keluar dengan kode 1 kalau ada pelanggaran, jadi bisa dipakai sebagai gerbang
+sebelum berkas anotasi diterima. Yang dilaporkan: pelanggaran langkah 2 (keras),
+rasio ragu di luar rentang §2, review pendek dilabeli bot (§4), dan keluhan
+dilabeli ragu (§5 langkah 2). Tiga yang terakhir bersifat saran tinjau ulang.
+
+Angka pelanggaran dari alat ini adalah **batas bawah**: leksikonnya sengaja tidak
+lengkap supaya tidak salah-tuduh.
+
+---
+
+## 9. Batasan yang diakui
 
 - **Tanpa konteks toko dan waktu.** Sumber `PRDECT-ID` tidak menyertakan
   `store_id` maupun `posted_at`, jadi `test_real.jsonl` hanya bisa mengevaluasi

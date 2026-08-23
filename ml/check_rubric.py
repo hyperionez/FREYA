@@ -15,11 +15,14 @@ Yang diperiksa:
 
 - **Pelanggaran** (section 5 langkah 2) - ada keluhan tapi dilabeli bot. Ini
   keras: langkah 2 berhenti di `0`, tidak ada ruang tafsir.
-- **Rasio ragu** (section 2) - di luar 10-20% berarti anotator menebak-nebak
-  (terlalu rendah) atau rubriknya kurang tajam (terlalu tinggi).
+- **Rasio ragu** (section 2) - di luar rentang yang diturunkan dari bentuk data.
+  Terlalu rendah berarti review ambigu dipaksa dijawab.
 - **Catatan** (section 4) - review pendek dilabeli bot. Bukan pelanggaran:
   review pendek BISA bot, tapi ">=2 sinyal section 3" sulit terpenuhi dalam
   teks sependek itu, jadi barisnya layak ditinjau ulang.
+- **Catatan** (section 5 langkah 2) - ada keluhan tapi dilabeli ragu. Langkah 2
+  memerintahkan asli, bukan ragu. Tetap bukan pelanggaran keras karena langkah 1
+  mendahuluinya: keluhan di dalam teks rusak atau terpotong memang jatuh ke ragu.
 
 Leksikon keluhannya sengaja beresolusi tinggi, bukan lengkap: alat ini menuduh
 orang melanggar rubrik, jadi salah-tuduh lebih mahal daripada terlewat. Kata
@@ -42,8 +45,12 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from ml.dataset_io import RAGU, load_records  # noqa: E402
 
-RAGU_MIN = 0.10
-RAGU_MAKS = 0.20
+# Rentang dari rubrik section 2, diturunkan dari bentuk data: 34% kolam adalah
+# review pendek tanpa keluhan, yang seluruhnya jatuh ke langkah 5. Target lama
+# 10-20% ditetapkan tanpa melihat distribusi panjang dan sudah dicabut. Hitung
+# ulang kalau kolam datanya berganti.
+RAGU_MIN = 0.20
+RAGU_MAKS = 0.40
 
 # Di bawah panjang ini, ">=2 sinyal section 3" praktis tidak bisa dibuktikan.
 # Angkanya dari data: median review yang anotatornya terbelah adalah 58 karakter.
@@ -53,12 +60,24 @@ PANJANG_PENDEK = 60
 KELUHAN = re.compile(
     r"\b("
     r"kecewa|mengecewakan|menyesal|komplain|"
-    r"rusak|cacat|sobek|bocor|penyok|retak|patah|"
-    r"jelek|buruk|palsu|luntur|zonk|"
+    r"rusak|cacat|sobek|bocor|penyok|retak|patah|pecah|bengkok|lecet|"
+    r"jelek|buruk|palsu|luntur|zonk|basi|kadaluarsa|kedaluwarsa|expired|"
     r"lambat|telat|"
+    r"nipu|menipu|penipu|"
     r"tidak sesuai|ga sesuai|gak sesuai|nggak sesuai|"
-    r"tidak layak|tidak berfungsi|kurang ajar|salah kirim"
+    r"tidak layak|tidak berfungsi|kurang ajar|"
+    # "salah" hanya dihitung kalau objeknya jelas barang atau pengiriman;
+    # "salah" telanjang terlalu sering muncul di kalimat non-keluhan.
+    r"salah (kirim|barang|warna|ukuran|item)|barang (yang|yg) salah|"
+    r"(tidak|ga|gak|nggak) bisa (dipakai|digunakan)|gabisa dipakai"
     r")\b",
+    re.IGNORECASE,
+)
+
+# "bau" dan "kotor" butuh penjagaan ekstra: "bau harum" bukan keluhan. Dipisah
+# supaya leksikon utama tetap terbaca sebagai daftar datar.
+KELUHAN_KONDISI = re.compile(
+    r"\b(bau|kotor)\b(?!\s+(harum|wangi|enak|sedap))",
     re.IGNORECASE,
 )
 
@@ -71,11 +90,12 @@ JANGKAUAN_NEGASI = 15
 
 def mengandung_keluhan(text: str) -> bool:
     """Apakah teks memuat keluhan yang tidak dinegasikan."""
-    for cocok in KELUHAN.finditer(text):
-        awalan = text[max(0, cocok.start() - JANGKAUAN_NEGASI) : cocok.start()]
-        if NEGASI.search(awalan):
-            continue
-        return True
+    for pola in (KELUHAN, KELUHAN_KONDISI):
+        for cocok in pola.finditer(text):
+            awalan = text[max(0, cocok.start() - JANGKAUAN_NEGASI) : cocok.start()]
+            if NEGASI.search(awalan):
+                continue
+            return True
     return False
 
 
@@ -88,6 +108,7 @@ def check_records(records: list[dict[str, Any]]) -> dict[str, Any]:
     """Periksa record beranotasi terhadap aturan rubrik yang mekanis."""
     pelanggaran: list[dict[str, Any]] = []
     catatan_pendek: list[dict[str, Any]] = []
+    catatan_keluhan_ragu: list[dict[str, Any]] = []
     per_anotator: dict[str, dict[str, int]] = defaultdict(
         lambda: {"total": 0, "pelanggaran": 0, "ragu": 0}
     )
@@ -108,6 +129,15 @@ def check_records(records: list[dict[str, Any]]) -> dict[str, Any]:
         if label == RAGU:
             jumlah_ragu += 1
             per_anotator[anotator]["ragu"] += 1
+            if mengandung_keluhan(text):
+                catatan_keluhan_ragu.append(
+                    {
+                        "review_id": record.get("review_id"),
+                        "annotated_by": anotator,
+                        "text": _ringkas(text),
+                        "aturan": "section 5 langkah 2 mengarah ke asli, bukan ragu - tinjau ulang",
+                    }
+                )
             continue
 
         if label == 1 and mengandung_keluhan(text):
@@ -137,6 +167,7 @@ def check_records(records: list[dict[str, Any]]) -> dict[str, Any]:
         "berlabel": jumlah_berlabel,
         "pelanggaran": pelanggaran,
         "catatan_pendek": catatan_pendek,
+        "catatan_keluhan_ragu": catatan_keluhan_ragu,
         "ragu": {
             "jumlah": jumlah_ragu,
             "rasio": rasio,
@@ -172,6 +203,7 @@ def format_report(path: str | Path, laporan: dict[str, Any], contoh: int = 5) ->
         baris.append(f"  ... {n - contoh} lagi")
 
     baris.append(f"Catatan review pendek dilabeli bot: {len(laporan['catatan_pendek'])}")
+    baris.append(f"Catatan keluhan dilabeli ragu: {len(laporan['catatan_keluhan_ragu'])}")
 
     if len(laporan["per_anotator"]) > 1:
         baris.append("Per anotator:")

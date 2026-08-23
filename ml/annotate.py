@@ -191,9 +191,15 @@ def _warn_on_ragu_ratio(total: int, ragu: int) -> None:
         return
     ratio = ragu / total
     if ratio < RAGU_MIN:
-        st.warning(f"Ragu hanya {ratio:.0%} — mungkin sedang menebak-nebak (target 10-20%).")
+        st.warning(
+            f"Ragu hanya {ratio:.0%} — mungkin sedang menebak-nebak "
+            f"(wajar {RAGU_MIN:.0%}-{RAGU_MAKS:.0%})."
+        )
     elif ratio > RAGU_MAKS:
-        st.warning(f"Ragu {ratio:.0%} — rubrik mungkin perlu dipertajam (target 10-20%).")
+        st.warning(
+            f"Ragu {ratio:.0%} — rubrik mungkin perlu dipertajam "
+            f"(wajar {RAGU_MIN:.0%}-{RAGU_MAKS:.0%})."
+        )
 
 
 def _render_sidebar(done: list[dict[str, Any]]) -> None:
