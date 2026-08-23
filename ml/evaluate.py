@@ -9,8 +9,14 @@ Dua test set dievaluasi karena mengukur dua hal berbeda (lihat `data/README.md`)
 
 - `test_synthetic.jsonl` — apakah model bisa memisahkan review asli dari review
   buatan LLM. Soal mudah, angkanya akan tinggi.
-- `test_real.jsonl` — 250 review berlabel tangan. Apakah kemampuan itu menyeberang
-  ke data dunia nyata. **Inilah angka penentu GO/NO-GO**, bukan yang sintetik.
+- `test_real.jsonl` — gold set 100 review, salinan `data/calibration/gold100.jsonl`.
+  Dilabeli tiga anotator lalu diadjudikasi; 97 baris dinilai karena 3 baris `ragu`
+  dilewati `dataset_io.load_labeled_records`. Apakah kemampuan itu menyeberang ke
+  data dunia nyata. **Inilah angka penentu GO/NO-GO**, bukan yang sintetik.
+
+  Isinya condong ke asli (75/22) karena itu proporsi dunia nyata apa adanya, bukan
+  set yang diseimbangkan. Baca recall kelas bot dengan sadar: 22 positif berarti
+  satu kesalahan menggeser recall sekitar 4,5 poin.
 
 Selisih antara keduanya adalah temuan yang wajib dilaporkan apa adanya di proposal.
 """
