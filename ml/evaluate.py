@@ -187,7 +187,6 @@ def print_verdict(results: dict[str, dict[str, float | None]]) -> None:
 
     print("  NO-GO.")
     if not beats_majority:
-        # Kasus paling menyesatkan: selisih tipis atas baseline lain yang juga rusak.
         print(
             f"  Macro F1 model ({real['model']:.3f}) tidak melewati penebak kelas "
             f"mayoritas ({real['majority']:.3f})."
