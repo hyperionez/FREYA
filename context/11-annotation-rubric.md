@@ -159,6 +159,38 @@ kappa 0.334, padahal seluruh 43 selisihnya bergerak satu arah menjauhi `bot` dan
 9 pelanggaran langkah 2 hilang jadi nol. Kalau protokolnya baru berubah, ulangi
 kalibrasi dengan **dua pass yang sama-sama dijaga**.
 
+### Catatan validitas — dibaca sebelum mengutip angka kappa mana pun
+
+Diaudit 23 Agustus 2026 dari stempel waktu `annotated_at`. **Kecepatan pelabelan
+adalah syarat sahnya angka, sama pentingnya dengan jeda antar-pass.**
+
+| Pass | Kecepatan | Layak dikutip |
+|---|---|---|
+| `calibration_michael` | 1,6 dtk/review | tidak |
+| `annotations_100` | 1,6 dtk/review | tidak |
+| `annotations_40` | 1,5 dtk/review | tidak |
+| `annotations_pass3` | 1,4 dtk/review | tidak |
+| `annotations_new` | **11,8 dtk/review** | ya |
+| `annotations_mt`, `_jibran`, `_nicho` (500 tiap orang) | median jeda 2–3 dtk | tidak |
+
+Konsekuensinya:
+
+- **κ test-retest 0.617 yang disebut di commit `7050eb9` DICABUT.** Angka itu
+  membandingkan `calibration_michael` dengan `annotations_100`, dan keduanya
+  dilabeli pada 1,6 detik per review — di bawah anggaran 15 detik §5. Jangan
+  masukkan ke lampiran proposal.
+- **κ antar-anotator 0.033–0.061 harus dilaporkan dengan konteks ini.** Ketiga
+  pass 500 review berjalan pada median 2–3 detik. Angka itu belum membuktikan
+  tugasnya mustahil dilabeli; yang terbukti adalah pelabelannya terlalu cepat.
+- **Belum ada angka konsistensi diri yang sah.** `annotations_new` satu-satunya
+  pass berkecepatan wajar (0 pelanggaran rubrik, rasio ragu masuk rentang), dan
+  belum punya pasangan. `data/calibration/batch_v3.jsonl` sudah disiapkan untuk
+  itu: 100 review yang sama, teracak, label kosong.
+
+Yang **boleh** diklaim hari ini: penjagaan alat menurunkan pelanggaran §5 langkah 2
+dari 9 menjadi 0 pada 100 review yang sama, dan seluruh 43 selisihnya bergerak satu
+arah menjauhi `bot`.
+
 Angka ini **wajib masuk proposal** sebagai lampiran. Konsistensi anotator yang
 diakui apa adanya lebih bernilai di mata juri daripada klaim akurasi tanpa dasar.
 
