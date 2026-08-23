@@ -49,6 +49,8 @@ def test_mengembalikan_none_saat_model_tidak_terpasang(monkeypatch):
 
 
 def test_hanya_menilai_sebanyak_batas_review(monkeypatch):
+    # Batas ini hanya berlaku saat lapis menyala, jadi gerbang dibuka khusus di sini.
+    monkeypatch.setattr(finetuned, "LAPIS2_AKTIF", True)
     dilihat = {}
 
     def catat(texts):
@@ -79,3 +81,57 @@ def test_router_memakai_model_saat_tersedia(monkeypatch):
     monkeypatch.setattr(review_analysis, "run_finetuned_classifier", lambda s, r: jawaban)
 
     assert review_analysis.get_review_authenticity_score("toko-1", [{"text": "a"}]) is jawaban
+
+
+# --- gerbang lapis 2 (dimatikan berdasarkan hasil evaluasi) ---
+
+
+def test_gerbang_mati_secara_default():
+    assert finetuned.LAPIS2_AKTIF is False
+
+
+def test_gerbang_mati_mengembalikan_none_walau_model_menjawab(monkeypatch):
+    monkeypatch.setattr(finetuned, "predict_bot_probabilities", lambda texts: [0.9] * len(texts))
+
+    assert finetuned.run_finetuned_classifier("toko-1", [{"text": "ada isinya"}]) is None
+
+
+def test_is_available_ikut_gerbang(monkeypatch):
+    monkeypatch.setattr(finetuned, "_pipeline", lambda: ("tokenizer", "model"))
+
+    assert finetuned.is_available() is False
+
+    monkeypatch.setattr(finetuned, "LAPIS2_AKTIF", True)
+    assert finetuned.is_available() is True
+
+
+def test_gerbang_dibuka_mengembalikan_penilaian_lagi(monkeypatch):
+    monkeypatch.setattr(finetuned, "LAPIS2_AKTIF", True)
+    monkeypatch.setattr(finetuned, "predict_bot_probabilities", lambda texts: [0.9] * len(texts))
+
+    hasil = finetuned.run_finetuned_classifier("toko-1", [{"text": "ada isinya"}])
+
+    assert hasil is not None
+    assert hasil["source"] == "finetuned_indobert"
+
+
+def test_router_jatuh_ke_heuristik_saat_gerbang_mati():
+    """Jalur yang benar-benar dikirim, tanpa monkeypatch apa pun.
+
+    Daftar review dikosongkan supaya heuristik tidak sampai memuat model
+    embedding: yang diuji di sini gerbangnya, bukan kualitas heuristiknya.
+    """
+    from app import review_analysis
+
+    assert review_analysis.get_review_authenticity_score("toko-1", [])["source"] == "heuristic_l1"
+
+
+def test_gerbang_memutus_sebelum_model_disentuh(monkeypatch):
+    # Kalau gerbang mati, _pipeline() tidak boleh dipanggil sama sekali - itulah
+    # yang membuat torch tidak pernah diimpor di jalur produksi.
+    def jangan_panggil():
+        raise AssertionError("_pipeline() tidak boleh dipanggil saat gerbang mati")
+
+    monkeypatch.setattr(finetuned, "_pipeline", jangan_panggil)
+
+    assert finetuned.run_finetuned_classifier("toko-1", [{"text": "ada isinya"}]) is None

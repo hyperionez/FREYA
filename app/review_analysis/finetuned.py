@@ -22,6 +22,25 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+# Gerbang Lapis 2 - dimatikan berdasarkan evaluasi 23 Agustus 2026 terhadap
+# data/test_real.jsonl (97 review teradjudikasi, 75 asli / 22 bot):
+#
+#     recall bot model         0.0%  (0 dari 22)   macro F1 0.436
+#     penebak kelas mayoritas                      macro F1 0.436
+#     heuristik Lapis 1        4.5%  (1 dari 22)   macro F1 0.477
+#
+# Model memprediksi "asli" untuk seluruh 97 review. Di test_synthetic.jsonl
+# recall botnya justru 99,6% - yang dipelajari adalah "apakah teks ini ditulis
+# LLM", bukan "apakah review ini bot", karena kelas bot di train.jsonl seluruhnya
+# review sintetik hasil Gemini sementara bot marketplace nyata adalah copy-paste
+# manusia. Mengirim lapis ini menyala berarti mengirim lapis yang terbukti lebih
+# buruk daripada menebak kelas mayoritas.
+#
+# Menyalakan kembali menuntut bukti baru, bukan keyakinan: jalankan
+# `python ml/evaluate.py --test data/test_real.jsonl` dan pastikan macro F1
+# model melewati heuristik. Ubah nilai ini hanya bersamaan angka barunya.
+LAPIS2_AKTIF = False
+
 MODEL_DIR = Path("ml/model/final")
 MAX_LENGTH = 256
 BOT_THRESHOLD = 0.5
@@ -52,7 +71,7 @@ def _pipeline():
 
 def is_available() -> bool:
     """Apakah model siap dipakai - dipakai pemanggil untuk memilih lapis."""
-    return _pipeline() is not None
+    return LAPIS2_AKTIF and _pipeline() is not None
 
 
 def predict_bot_probabilities(texts: list[str]) -> list[float]:
@@ -118,6 +137,12 @@ def run_finetuned_classifier(
     None berarti "lapis ini tidak menjawab" - model absen, atau tidak ada teks
     review yang bisa dinilai - dan pemanggil wajib jatuh ke heuristik.
     """
+    # Gerbang didahulukan sebelum apa pun: kalau lapis ini mati, torch tidak
+    # perlu diimpor sama sekali. Itu juga menghindari urutan impor torch-sebelum
+    # -sklearn yang mematikan proses dengan heap corruption (lihat docstring).
+    if not LAPIS2_AKTIF:
+        return None
+
     texts = [review["text"] for review in reviews if review.get("text", "").strip()]
     if not texts:
         return None
