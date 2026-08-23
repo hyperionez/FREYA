@@ -4,7 +4,7 @@ from statistics import median
 from typing import Any
 
 from app.product_matching import filter_relevant_products, group_products_by_variant
-from app.review_analysis.embedding import get_review_authenticity_score
+from app.review_analysis import get_review_authenticity_score
 
 
 def extract_features(stores: list[dict[str, Any]], query: str) -> list[dict[str, Any]]:
