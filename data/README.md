@@ -24,7 +24,7 @@ berlabel belum tersedia publik.
 | `train.jsonl` | data latih, seimbang 50/50 | ya |
 | `test_synthetic.jsonl` | holdout sintetik — uji *in-distribution* | ya |
 | `to_label.jsonl` | kolam review asli untuk dilabeli tangan | ya |
-| `test_real.jsonl` | hasil pelabelan tangan — uji *out-of-distribution* | ya |
+| `test_real.jsonl` | gold set teradjudikasi — uji *out-of-distribution* | ya |
 
 ## Skema
 
@@ -50,6 +50,17 @@ berlabel belum tersedia publik.
   review LLM. Angkanya akan tinggi — ini soal yang mudah.
 - `test_real.jsonl` mengukur apakah kemampuan itu **menyeberang** ke review bot
   sungguhan di dunia nyata. Ini yang menentukan model layak dipasang atau tidak.
+
+  Isinya salinan `calibration/gold100.jsonl`: 100 review yang dilabeli tiga
+  anotator independen lalu diadjudikasi, 75 asli / 22 bot / 3 ragu. Baris `ragu`
+  ikut tersimpan tapi dilewati `dataset_io.load_labeled_records`, jadi 97 baris
+  yang benar-benar dinilai. Proporsinya sengaja tidak diseimbangkan supaya
+  mencerminkan distribusi dunia nyata.
+
+  Versi sebelumnya — 250 baris tanpa `annotated_by` — dipensiunkan: 241 barisnya
+  berlabel identik dengan `test_real.pass1-sentimen.jsonl`, yaitu pass yang
+  memakai pertanyaan sentimen dan sudah direset di commit b137fcc. Kesepakatannya
+  dengan gold set hanya 60% pada 50 baris yang beririsan.
 
 Selisih antara keduanya adalah temuan jujur yang wajib masuk proposal, bukan
 kelemahan yang disembunyikan.
