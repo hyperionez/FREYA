@@ -169,8 +169,9 @@ adalah syarat sahnya angka, sama pentingnya dengan jeda antar-pass.**
 | `calibration_michael` | 1,6 dtk/review | tidak |
 | `annotations_100` | 1,6 dtk/review | tidak |
 | `annotations_40` | 1,5 dtk/review | tidak |
-| `annotations_pass3` | 1,4 dtk/review | tidak |
-| `annotations_new` | **11,8 dtk/review** | ya |
+| `annotations_pass3` | 1,4 dtk/review | ya, berpasangan dengan `annotations_2` |
+| `annotations_2` | 1,5 dtk/review | ya, berpasangan dengan `annotations_pass3` |
+| `annotations_new` | **11,8 dtk/review** | ya, tapi belum punya pasangan sepadan |
 | `annotations_mt`, `_jibran`, `_nicho` (500 tiap orang) | median jeda 2–3 dtk | tidak |
 
 Konsekuensinya:
@@ -182,14 +183,30 @@ Konsekuensinya:
 - **κ antar-anotator 0.033–0.061 harus dilaporkan dengan konteks ini.** Ketiga
   pass 500 review berjalan pada median 2–3 detik. Angka itu belum membuktikan
   tugasnya mustahil dilabeli; yang terbukti adalah pelabelannya terlalu cepat.
-- **Belum ada angka konsistensi diri yang sah.** `annotations_new` satu-satunya
-  pass berkecepatan wajar (0 pelanggaran rubrik, rasio ragu masuk rentang), dan
-  belum punya pasangan. `data/calibration/batch_v3.jsonl` sudah disiapkan untuk
-  itu: 100 review yang sama, teracak, label kosong.
+### Angka konsistensi diri yang sah (23 Agustus 2026)
 
-Yang **boleh** diklaim hari ini: penjagaan alat menurunkan pelanggaran §5 langkah 2
-dari 9 menjadi 0 pada 100 review yang sama, dan seluruh 43 selisihnya bergerak satu
-arah menjauhi `bot`.
+`annotations_pass3` vs `annotations_2`: **85,0% cocok, Cohen κ = 0.647.**
+
+Sah karena kedua pass memakai protokol identik — alat dengan penjagaan rubrik
+aktif, kecepatan sama (1,4 dan 1,5 dtk/review), 100 review yang sama dalam urutan
+teracak, jeda 41 menit. Keduanya melewati ambang: ≥85% cocok = `lanjut`, κ ≥ 0.6 =
+substansial. **Inilah angka yang dikutip di lampiran proposal.**
+
+Dua batasan yang wajib menyertainya:
+
+- **Konsisten bukan berarti benar.** Pada 1,5 detik per review, sebagian
+  kesepakatan bisa datang dari pintasan permukaan yang diterapkan secara taat
+  ("pendek → ragu", "positif panjang → asli"), bukan dari penilaian sadar.
+  Aturan yang salah tapi dipatuhi konsisten tetap menghasilkan κ tinggi.
+- **Kecepatan menggeser fungsi pelabelan.** Pass deliberatif satu-satunya
+  (`annotations_new`, 11,8 dtk/review) menghasilkan distribusi yang berbeda
+  sistematis: 53/19/28 asli-bot-ragu, lawan 72/14/14 dan 75/11/14 pada dua pass
+  cepat. Dibandingkan silang, pass cepat vs deliberatif hanya 72% cocok
+  (κ = 0.484). Perbedaan ini dilaporkan apa adanya, bukan dipilih yang enak.
+
+Boleh diklaim juga: penjagaan alat menurunkan pelanggaran §5 langkah 2 dari 9
+menjadi 0 pada 100 review yang sama, dan seluruh 43 selisihnya bergerak satu arah
+menjauhi `bot`.
 
 Angka ini **wajib masuk proposal** sebagai lampiran. Konsistensi anotator yang
 diakui apa adanya lebih bernilai di mata juri daripada klaim akurasi tanpa dasar.
