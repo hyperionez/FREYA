@@ -31,4 +31,4 @@ def _build_reasons(contributions: list[dict[str, Any]]) -> list[str]:
     significant = [c for c in contributions if abs(c["contribution"]) >= REASON_CONTRIBUTION_THRESHOLD]
     significant.sort(key=lambda c: abs(c["contribution"]), reverse=True)
     reasons = [c["detail"] for c in significant]
-    return reasons or ["Tidak ada sinyal signifikan terdeteksi skor mendekati baseline netral"]
+    return reasons or ["Tidak ada sinyal signifikan terdeteksi — skor mendekati baseline netral"]
